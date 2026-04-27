@@ -1,0 +1,26 @@
+CORREÇÃO DE SESSÃO CLIENTE/GESTÃO
+
+Problema corrigido:
+- Antes, cliente e gestor usavam a mesma sessão Supabase no mesmo domínio.
+- Quando uma pessoa entrava no app cliente e depois fazia login no gestor, a sessão podia ser compartilhada pelo navegador.
+- Agora o app cliente e o app da gestão usam storage keys separadas:
+  - husky_cliente_auth_v1
+  - husky_gestao_auth_v1
+
+Também foi reforçado:
+- A gestão valida a sessão no Supabase e confere a tabela admin_users antes de abrir.
+- O gestor não confia mais apenas no localStorage husky_admin_user quando o Supabase está configurado.
+- Se o usuário não estiver em admin_users ativo, a gestão bloqueia o acesso.
+
+IMPORTANTE APÓS PUBLICAR:
+1. Suba todos os arquivos na Vercel.
+2. Abra uma vez:
+   https://SEU-LINK/limpar-sessoes.html
+3. Clique em limpar sessões.
+4. Faça login no cliente com conta de cliente.
+5. Faça login no gestor com e-mail cadastrado em admin_users.
+
+Links:
+Cliente: /
+Gestão: /gestao.html
+Limpar sessões antigas: /limpar-sessoes.html

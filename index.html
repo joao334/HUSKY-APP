@@ -132,7 +132,14 @@
 
     function initSupabase(){
       if(!state.config.url || !state.config.anon || !window.supabase){ state.configured=false; return; }
-      state.supabase = window.supabase.createClient(state.config.url,state.config.anon);
+      state.supabase = window.supabase.createClient(state.config.url, state.config.anon, {
+        auth: {
+          storageKey: "husky_cliente_auth_v1",
+          autoRefreshToken: true,
+          persistSession: true,
+          detectSessionInUrl: false
+        }
+      });
       state.configured=true;
       state.supabase.auth.getSession().then(async ({data})=>{
         state.session=data.session;state.user=data.session?.user||null;

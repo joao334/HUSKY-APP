@@ -48,7 +48,14 @@ const APP_CONFIG = {
 };
 
 const HAS_SUPABASE = !!(APP_CONFIG.supabaseUrl && APP_CONFIG.supabaseAnonKey && window.supabase);
-const db = HAS_SUPABASE ? window.supabase.createClient(APP_CONFIG.supabaseUrl, APP_CONFIG.supabaseAnonKey) : null;
+const db = HAS_SUPABASE ? window.supabase.createClient(APP_CONFIG.supabaseUrl, APP_CONFIG.supabaseAnonKey, {
+  auth: {
+    storageKey: "husky_gestao_auth_v1",
+    autoRefreshToken: true,
+    persistSession: true,
+    detectSessionInUrl: false
+  }
+}) : null;
 
 const assets = {
   logo: "assets/husky/HUSKY (2)(1).png",
@@ -229,7 +236,14 @@ async function login(email,password){
 async function loadRole(userId){
   try{const {data,error}=await db.from("admin_users").select("*").eq("user_id",userId).eq("active",true).single();if(error)return null;return data}catch(e){return null}
 }
-function logout(){state.user=null;localStorage.removeItem("husky_admin_user");renderLogin()}
+async function logout(){
+  if (HAS_SUPABASE && db) {
+    try { await db.auth.signOut(); } catch (e) {}
+  }
+  state.user=null;
+  localStorage.removeItem("husky_admin_user");
+  renderLogin();
+}
 
 function renderLogin(){
   document.getElementById("root").innerHTML=`<main class="login"><section class="login-box"><div class="logo"><div class="logo-mark"><img src="${assets.logo}" onerror="this.style.display='none'"><span>🐺</span></div><div><h1>Husky Gestão</h1><p>Painel operacional completo</p></div></div><h2>Entrar na gestão</h2><p>Acesso separado do cliente. Use e-mail com permissão administrativa.</p><div class="grid"><div class="field"><label>E-mail</label><input id="loginEmail" value="admin@husky.com"></div><div class="field"><label>Senha</label><input id="loginPass" type="password" value="123456"></div><button class="btn blue" onclick="login(document.getElementById('loginEmail').value,document.getElementById('loginPass').value)">Entrar</button><button class="btn light" onclick="toast('Recuperação será feita pelo Supabase Auth.')">Recuperar senha</button><p style="font-size:12px;color:#777;font-weight:800">Modo local: use admin@husky.com. No Supabase, crie o usuário em Authentication e cadastre em admin_users.</p></div></section></main>`;
@@ -383,6 +397,51 @@ function exportCSV(key){const data=state.data[key]||[];if(!data.length){toast('N
 function beep(){try{const ctx=new (window.AudioContext||window.webkitAudioContext)();const o=ctx.createOscillator();const g=ctx.createGain();o.connect(g);g.connect(ctx.destination);o.frequency.value=880;g.gain.value=.05;o.start();setTimeout(()=>{o.stop();ctx.close()},180)}catch(e){}}
 
 (async function bootGestao(){
+  // Segurança: quando o Supabase está configurado, a gestão NUNCA confia só no localStorage.
+  // Ela valida a sessão separada da gestão e confirma se o usuário existe em admin_users.
+  if (HAS_SUPABASE && db) {
+    try {
+      const { data } = await db.auth.getSession();
+      const sessionUser = data?.session?.user || null;
+
+      if (!sessionUser) {
+        state.user = null;
+        localStorage.removeItem("husky_admin_user");
+        renderLogin();
+        return;
+      }
+
+      const role = await loadRole(sessionUser.id);
+      if (!role) {
+        await db.auth.signOut();
+        state.user = null;
+        localStorage.removeItem("husky_admin_user");
+        renderLogin();
+        toast("Esta conta não tem permissão de gestão.");
+        return;
+      }
+
+      state.user = {
+        id: sessionUser.id,
+        email: sessionUser.email,
+        name: role.name || sessionUser.email,
+        role: role.role || "operator",
+        permissions: role.permissions || []
+      };
+      localStorage.setItem("husky_admin_user", JSON.stringify(state.user));
+      await loadSupabaseData();
+      setupGestaoRealtime();
+      render();
+      return;
+    } catch (e) {
+      state.user = null;
+      localStorage.removeItem("husky_admin_user");
+      renderLogin();
+      return;
+    }
+  }
+
+  // Modo local sem Supabase: permite usar o login local de teste.
   if(state.user){ await loadSupabaseData(); setupGestaoRealtime(); render(); }
   else renderLogin();
 })();
