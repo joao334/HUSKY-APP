@@ -1,0 +1,16 @@
+ALTERAÇÕES DESTA VERSÃO
+
+1. Gestor refeito com chat estilo WhatsApp:
+   - Coluna de conversas por cliente.
+   - Mensagens em bolhas.
+   - Respostas rápidas.
+   - Campo de mensagem real, sem prompt.
+   - Botão de WhatsApp externo.
+   - Marcar conversa como lida.
+   - Atualização pelo Supabase Realtime.
+
+2. Cliente e gestão seguem usando a mesma tabela chat_messages.
+
+3. Gestão continua completa com todos os módulos solicitados.
+
+4. Arquivo preparado para subir sem Node: HTML + CSS + JS + Supabase CDN.
