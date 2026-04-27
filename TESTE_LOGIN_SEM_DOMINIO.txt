@@ -1,0 +1,46 @@
+TESTE DE LOGIN SEM DOMÍNIO / SEM RESEND
+
+Este pacote foi ajustado para permitir teste do app cliente com E-MAIL + SENHA, sem depender de código por e-mail.
+
+POR QUE ISSO FOI FEITO?
+O Supabase estava retornando: email rate limit exceeded.
+Sem domínio próprio no Resend, o envio de código por e-mail fica limitado pelo provedor padrão do Supabase.
+
+COMO TESTAR AGORA:
+1. Abra o Supabase.
+2. Vá em Authentication > Providers > Email.
+3. Para teste, desative a confirmação obrigatória de e-mail, se estiver ligada:
+   - Confirm email: OFF / desligado.
+   Isso evita envio de e-mail na criação da conta.
+
+4. Publique ou abra o app do cliente.
+5. Entre no Perfil ou tente finalizar pedido.
+6. O app vai mostrar por padrão:
+   - Nome
+   - E-mail
+   - Senha
+   - WhatsApp
+   - Endereço
+7. Crie a conta com senha.
+8. Depois clique em Já tenho conta e entre com o mesmo e-mail e senha.
+
+IMPORTANTE:
+- O botão "Usar código por e-mail" continua no app, mas só deve ser usado depois que o SMTP/Resend estiver configurado.
+- Para produção, o ideal continua sendo: domínio próprio + Resend + código OTP por e-mail.
+- Para teste sem domínio, use senha.
+
+SE VOCÊ NÃO QUISER DESATIVAR CONFIRMAÇÃO DE E-MAIL:
+1. No Supabase, vá em Authentication > Users.
+2. Clique em Add user.
+3. Crie um usuário manualmente com e-mail e senha.
+4. Marque como confirmado, se a opção aparecer.
+5. No app, clique em Já tenho conta e entre com e-mail e senha.
+
+ARQUIVO ALTERADO:
+- index.html
+
+ALTERAÇÃO FEITA:
+- Login do cliente agora inicia em modo senha.
+- Cadastro com senha usando Supabase Auth signUp.
+- Login com senha usando Supabase Auth signInWithPassword.
+- Código por e-mail ficou como opção futura.

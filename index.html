@@ -113,7 +113,7 @@
       cart:loadJson("husky_cart",{}), orders:[], chatMessages:[], productModal:null,
       couponCode:"", fulfillment:"delivery", paymentMethod:"Pix", payment:null,
       address:"Praça das Artes - Embu das Artes", search:"", filter:"todos", loading:false,
-      auth:{ mode:"register", step:"form", name:"", email:"", phone:"", address:"Praça das Artes - Embu das Artes", code:"", message:"" },
+      auth:{ mode:"register", step:"form", method:"password", name:"", email:"", phone:"", address:"Praça das Artes - Embu das Artes", password:"", code:"", message:"" },
       config:{ url:APP_CONFIG.supabaseUrl, anon:APP_CONFIG.supabaseAnonKey, pixFunction:APP_CONFIG.pixFunction, checkFunction:APP_CONFIG.checkFunction, whatsapp:APP_CONFIG.whatsapp }
     };
 
@@ -316,8 +316,39 @@
       catch(e){alert('Erro ao salvar perfil: '+e.message)}
     } window.saveProfile=saveProfile;
     function authRequired(title,sub){return `<div class="auth-wrap"><div style="width:100%;max-width:520px"><div class="card" style="text-align:center;margin-bottom:14px"><div class="icon-btn" style="width:78px;height:78px;margin:0 auto;font-size:40px">🐺</div><h2 style="font-size:25px;margin-top:14px">${title}</h2><p class="muted">${sub}</p></div>${authPanel(true)}</div></div>`}
-    function authPanel(compact=false){const a=state.auth;return `<section class="auth-card"><div>${logo()}<h2 style="font-size:30px;margin:28px 0 0;font-weight:1000">${a.step==='code'?'Verifique seu e-mail':'Entrar ou criar conta'}</h2><p class="muted">${a.step==='code'?`Digite o código enviado para ${escapeHtml(a.email)}.`:'Você pode navegar sem conta. Para pagar, valide seu e-mail.'}</p></div>${a.step==='form'?`<div>${a.mode==='register'?input('Nome','name','user'):''}${input('E-mail','email','mail')}${a.mode==='register'?input('WhatsApp','phone','chat')+input('Endereço','address','map'):''}</div>`:`<div>${input('Código de verificação','code','shield')}<div class="message">Login real: o código deve ser enviado e validado pelo Supabase Auth.</div></div>`}${a.message?`<div class="message ${a.message.includes('Erro')||a.message.includes('inválido')?'error':'ok'}">${escapeHtml(a.message)}</div>`:''}<button class="primary full mt" onclick="${a.step==='form'?'sendCode()':'verifyCode()'}">${a.step==='form'?'Enviar código por e-mail':'Validar código'}</button>${a.step==='form'?`<button class="outline full mt" onclick="state.auth.mode=state.auth.mode==='register'?'login':'register';render()">${a.mode==='register'?'Já tenho conta':'Criar conta'}</button>`:`<button class="outline full mt" onclick="state.auth.step='form';render()">Trocar e-mail</button>`}</section>`}
-    function input(label,key,ic){return `<label class="input-field"><span>${label}</span><div class="input-shell">${icon(ic)}<input value="${escapeHtml(state.auth[key]||'')}" oninput="state.auth.${key}=this.value" placeholder="${label}"></div></label>`}
+    function authPanel(compact=false){
+      const a=state.auth;
+      const usingCode=a.method==='otp';
+      return `<section class="auth-card"><div>${logo()}<h2 style="font-size:30px;margin:28px 0 0;font-weight:1000">${a.step==='code'?'Verifique seu e-mail':(a.mode==='register'?'Criar conta':'Entrar na conta')}</h2><p class="muted">${a.step==='code'?`Digite o código enviado para ${escapeHtml(a.email)}.`:(usingCode?'Modo código por e-mail. Use depois que o SMTP/Resend estiver configurado.':'Modo teste sem domínio: entre com e-mail e senha.')}</p></div>${a.step==='form'?`<div>${a.mode==='register'?input('Nome','name','user'):''}${input('E-mail','email','mail')}${usingCode?'':input('Senha','password','lock','password')}${a.mode==='register'?input('WhatsApp','phone','chat')+input('Endereço','address','map'):''}</div>`:`<div>${input('Código de verificação','code','shield')}<div class="message">Login por código: depende do SMTP do Supabase/Resend. Para testes sem domínio, volte e use senha.</div></div>`}${a.message?`<div class="message ${a.message.includes('Erro')||a.message.includes('inválido')||a.message.includes('não')?'error':'ok'}">${escapeHtml(a.message)}</div>`:''}${a.step==='form'?`<button class="primary full mt" onclick="${usingCode?'sendCode()':'passwordAuth()'}">${usingCode?'Enviar código por e-mail':(a.mode==='register'?'Criar conta com senha':'Entrar com senha')}</button><button class="outline full mt" onclick="state.auth.mode=state.auth.mode==='register'?'login':'register';state.auth.message='';render()">${a.mode==='register'?'Já tenho conta':'Criar conta'}</button><button class="outline full mt" onclick="state.auth.method=state.auth.method==='password'?'otp':'password';state.auth.message='';render()">${usingCode?'Usar senha para teste':'Usar código por e-mail'}</button>`:`<button class="primary full mt" onclick="verifyCode()">Validar código</button><button class="outline full mt" onclick="state.auth.step='form';render()">Voltar</button>`}</section>`}
+    function input(label,key,ic,type='text'){return `<label class="input-field"><span>${label}</span><div class="input-shell">${icon(ic)}<input type="${type}" value="${escapeHtml(state.auth[key]||'')}" oninput="state.auth.${key}=this.value" placeholder="${label}"></div></label>`}
+    async function passwordAuth(){
+      const a=state.auth;
+      if(!a.email.includes('@')){a.message='Digite um e-mail válido.';render();return}
+      if(!a.password || a.password.length<6){a.message='Digite uma senha com pelo menos 6 caracteres.';render();return}
+      if(!state.supabase){a.message='Supabase ainda não está configurado. Edite o arquivo config.js com Project URL e anon public key.';render();return}
+      a.message=a.mode==='register'?'Criando conta...':'Entrando...';render();
+      try{
+        let result;
+        if(a.mode==='register'){
+          result=await state.supabase.auth.signUp({email:a.email,password:a.password,options:{data:{name:a.name,phone:a.phone,address:a.address}}});
+        }else{
+          result=await state.supabase.auth.signInWithPassword({email:a.email,password:a.password});
+        }
+        if(result.error) throw result.error;
+        if(!result.data.session && a.mode==='register'){
+          a.message='Conta criada, mas o Supabase ainda pediu confirmação por e-mail. Para teste sem domínio, desative Confirm email em Authentication > Providers > Email ou crie o usuário manualmente como confirmado.';
+          render();return;
+        }
+        state.session=result.data.session;
+        state.user=result.data.user;
+        await upsertProfile(); await loadProfile(); await loadOrders(); await loadChat(); subscribeRealtime();
+        state.address=state.user?.profile?.address||a.address||state.address;
+        a.message='';state.tab='home';state.page='app';render();
+      }catch(e){
+        a.message='Erro no login por senha: '+e.message;
+        render();
+      }
+    } window.passwordAuth=passwordAuth;
     async function sendCode(){
       const a=state.auth;if(!a.email.includes('@')){a.message='Digite um e-mail válido.';render();return}
       a.message='Enviando código...';render();
