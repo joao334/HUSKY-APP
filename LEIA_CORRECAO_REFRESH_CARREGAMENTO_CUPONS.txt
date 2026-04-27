@@ -1,0 +1,21 @@
+CORREÇÃO APLICADA - HUSKY APP
+
+1) Corrigido o problema do cliente ficar preso em "Carregando Husky..." ao atualizar a página.
+   O app agora renderiza imediatamente com dados locais e depois atualiza do Supabase sem travar a tela.
+
+2) Corrigida a atualização pública de catálogo/cupons no cliente.
+   O cliente agora escuta produtos, cupons e configurações mesmo sem estar logado.
+
+3) Para os cupons alterados no gestor aparecerem no cliente:
+   - rode PATCH_PERSISTENCIA_TOTAL_HUSKY.sql no Supabase;
+   - entre no gestor com usuário admin liberado em admin_users;
+   - salve o cupom no gestor;
+   - confira em Supabase > Table Editor > coupons se o registro mudou;
+   - atualize o cliente ou aguarde o realtime.
+
+4) Depois de subir este pacote na Vercel, acesse uma vez:
+   https://husky-app.vercel.app/limpar-sessoes.html
+
+5) Depois abra em guia anônima:
+   Cliente: https://husky-app.vercel.app/
+   Gestão: https://husky-app.vercel.app/gestao.html
