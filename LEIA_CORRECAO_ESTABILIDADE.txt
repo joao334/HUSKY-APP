@@ -1,0 +1,19 @@
+CORREÇÃO DE ESTABILIDADE - LOGIN + CHAT + TELA BRANCA
+
+O que foi corrigido:
+1. App cliente e gestão continuam com sessões separadas.
+2. Tela branca agora mostra uma tela de erro com botão para limpar sessão.
+3. Chat cliente -> gestão grava no Supabase com validação de perfil.
+4. Chat gestão -> cliente responde no estilo WhatsApp.
+5. Gestor carrega dados do Supabase de forma tolerante: se uma tabela ainda não existir, a tela não quebra.
+6. Login do cliente por senha ficou mais estável para teste sem domínio/Resend.
+7. Novo patch SQL garante policies de profiles, admin_users e chat_messages.
+
+Depois de subir na Vercel:
+1. Rode no Supabase SQL Editor: PATCH_ESTABILIDADE_LOGIN_CHAT.sql
+2. Abra https://husky-app.vercel.app/limpar-sessoes.html e limpe as sessões antigas.
+3. Faça login no cliente com uma conta comum.
+4. Faça login na gestão com uma conta cadastrada em admin_users.
+5. Teste o chat: cliente envia mensagem, gestor responde, cliente recebe.
+
+Se a tela ficar branca, ela agora mostrará o erro na tela em vez de sumir do nada.

@@ -158,37 +158,44 @@ function saveAll(){
   localStorage.setItem("husky_sound_on", JSON.stringify(state.soundOn));
 }
 
+async function safeTable(label, builder){
+  try{
+    const res=await builder;
+    if(res.error){console.warn(label,res.error.message);return []}
+    return res.data||[];
+  }catch(e){console.warn(label,e.message);return []}
+}
 async function loadSupabaseData(){
   if(!HAS_SUPABASE || !state.user) return;
   try{
-    const [products,orders,coupons,cats,addons,banners,profiles,chats,settings,reviews]=await Promise.all([
-      db.from('products').select('*, product_categories(name)').order('sort_order',{ascending:true}),
-      db.from('customer_orders').select('*, order_items(*)').order('created_at',{ascending:false}),
-      db.from('coupons').select('*').order('created_at',{ascending:false}),
-      db.from('product_categories').select('*').order('sort_order',{ascending:true}),
-      db.from('product_addons').select('*').order('created_at',{ascending:false}),
-      db.from('banners').select('*').order('sort_order',{ascending:true}),
-      db.from('profiles').select('*').order('created_at',{ascending:false}),
-      db.from('chat_messages').select('*').order('created_at',{ascending:false}),
-      db.from('store_settings').select('*'),
-      db.from('reviews').select('*, profiles:user_id(name,email)').order('created_at',{ascending:false}),
-    ]);
-    if(products.data?.length) state.data.products=products.data.map(p=>({id:p.id,name:p.name,slug:p.slug,category:p.product_categories?.name||p.category||'Bolos de pote',price:Number(p.price||0),promo_price:p.promo_price,cost:Number(p.cost_estimate||p.cost||0),stock:Number(p.stock||0),min_stock:Number(p.min_stock||0),active:p.active,available:p.available,visible_on_client:p.visible_on_client,featured:p.featured,image_url:p.image_url,size:p.size,weight:p.weight,prep_time:p.preparation_minutes,tag:p.tag,description:p.description,details:p.details,ingredients:p.ingredients,allergens:p.allergens,sku:p.sku}));
-    if(orders.data) state.data.orders=orders.data.map(o=>({...o,items:o.order_items||[],address:o.address_snapshot||o.address||null,history:o.history||[]}));
-    if(coupons.data) state.data.coupons=coupons.data.map(c=>({id:c.id,code:c.code,title:c.title,type:c.discount_type,value:Number(c.discount_value||0),min_subtotal:Number(c.min_subtotal||0),min_items:Number(c.min_items||0),active:c.active,starts_at:c.starts_at||'',expires_at:c.expires_at||'',max_uses:c.max_uses||0,used:c.used_count||0,first_purchase:c.first_purchase_only||false,products:[],clients:[]}));
-    if(cats.data) state.data.categories=cats.data.map(c=>({id:c.id,name:c.name,active:c.active,sort:c.sort_order,image:c.image_url,schedule:JSON.stringify(c.schedule||{})}));
-    if(addons.data) state.data.addons=addons.data.map(a=>({id:a.id,group:a.group_name,name:a.name,price:Number(a.price||0),active:a.active,required:a.required,min:a.min_choices,max:a.max_choices,stock:a.stock,products:[]}));
-    if(banners.data) state.data.banners=banners.data.map(b=>({id:b.id,title:b.title,image:b.image_url,active:b.active,starts_at:b.starts_at,ends_at:b.ends_at,link_type:b.link_type,link_value:b.link_value,clicks:b.clicks||0,sort:b.sort_order}));
-    if(profiles.data) state.data.customers=profiles.data.map(p=>({id:p.id,name:p.name||p.email,email:p.email,phone:p.phone,address:p.address,orders:state.data.orders.filter(o=>o.user_id===p.id).length,total_spent:state.data.orders.filter(o=>o.user_id===p.id).reduce((sum,o)=>sum+Number(o.total||0),0),last_order:'',favorite:'',status:p.status||'active',notes:p.notes||'',birthday:p.birthday||''}));
-    if(chats.data){
-      const profileById = new Map((profiles.data||[]).map(p=>[p.id,p]));
-      state.data.chats=chats.data.map(m=>{
-        const prof=profileById.get(m.user_id)||{};
-        return {id:m.id,user_id:m.user_id,order_id:m.order_id,order_number:state.data.orders.find(o=>o.id===m.order_id)?.order_number||'',customer:prof.name||prof.email||'Cliente',sender:m.sender,message:m.message,created_at:m.created_at,read:!!m.read_at};
+    const productsData=await safeTable('products', db.from('products').select('*'));
+    const ordersData=await safeTable('customer_orders', db.from('customer_orders').select('*, order_items(*)').order('created_at',{ascending:false}));
+    const couponsData=await safeTable('coupons', db.from('coupons').select('*'));
+    const catsData=await safeTable('product_categories', db.from('product_categories').select('*'));
+    const addonsData=await safeTable('product_addons', db.from('product_addons').select('*'));
+    const bannersData=await safeTable('banners', db.from('banners').select('*'));
+    const profilesData=await safeTable('profiles', db.from('profiles').select('*'));
+    const chatsData=await safeTable('chat_messages', db.from('chat_messages').select('*').order('created_at',{ascending:false}));
+    const settingsData=await safeTable('store_settings', db.from('store_settings').select('*'));
+    const reviewsData=await safeTable('reviews', db.from('reviews').select('*'));
+    if(productsData.length) state.data.products=productsData.map(p=>({id:p.id,name:p.name,slug:p.slug,category:p.category||'Bolos de pote',price:Number(p.price||0),promo_price:p.promo_price,cost:Number(p.cost_estimate||p.cost||0),stock:Number(p.stock||0),min_stock:Number(p.min_stock||0),active:p.active!==false,available:p.available!==false,visible_on_client:p.visible_on_client!==false,featured:!!p.featured,image_url:p.image_url,size:p.size,weight:p.weight,prep_time:p.preparation_minutes||p.prep_time,tag:p.tag,description:p.description,details:p.details,ingredients:p.ingredients,allergens:p.allergens,sku:p.sku}));
+    if(ordersData) state.data.orders=ordersData.map(o=>({...o,items:o.order_items||[],address:o.address_snapshot||o.address||null,history:o.history||[]}));
+    if(couponsData.length) state.data.coupons=couponsData.map(c=>({id:c.id,code:c.code,title:c.title,type:c.discount_type,value:Number(c.discount_value||0),min_subtotal:Number(c.min_subtotal||0),min_items:Number(c.min_items||0),active:c.active!==false,starts_at:c.starts_at||'',expires_at:c.expires_at||'',max_uses:c.max_uses||0,used:c.used_count||0,first_purchase:c.first_purchase_only||false,products:[],clients:[]}));
+    if(catsData.length) state.data.categories=catsData.map(c=>({id:c.id,name:c.name,active:c.active!==false,sort:c.sort_order||c.sort||1,image:c.image_url||'',schedule:typeof c.schedule==='string'?c.schedule:JSON.stringify(c.schedule||{})}));
+    if(addonsData.length) state.data.addons=addonsData.map(a=>({id:a.id,group:a.group_name||a.group||'Adicionais',name:a.name,price:Number(a.price||0),active:a.active!==false,required:!!a.required,min:a.min_choices||0,max:a.max_choices||1,stock:a.stock||0,products:[]}));
+    if(bannersData.length) state.data.banners=bannersData.map(b=>({id:b.id,title:b.title,image:b.image_url||b.image,active:b.active!==false,starts_at:b.starts_at,ends_at:b.ends_at,link_type:b.link_type,link_value:b.link_value,clicks:b.clicks||0,sort:b.sort_order||b.sort||1}));
+    if(profilesData) state.data.customers=profilesData.map(p=>({id:p.id,name:p.name||p.email||'Cliente',email:p.email||'',phone:p.phone||'',address:p.address||'',orders:state.data.orders.filter(o=>o.user_id===p.id).length,total_spent:state.data.orders.filter(o=>o.user_id===p.id).reduce((sum,o)=>sum+Number(o.total||0),0),last_order:'',favorite:'',status:p.status||'active',notes:p.notes||'',birthday:p.birthday||''}));
+    if(chatsData){
+      const profileById = new Map((profilesData||[]).map(p=>[String(p.id),p]));
+      const orderById = new Map((state.data.orders||[]).map(o=>[String(o.id),o]));
+      state.data.chats=chatsData.map(m=>{
+        const prof=profileById.get(String(m.user_id))||{};
+        const ord=m.order_id?orderById.get(String(m.order_id)):null;
+        return {id:m.id,user_id:m.user_id,order_id:m.order_id,order_number:ord?.order_number||'',customer:prof.name||prof.email||('Cliente '+String(m.user_id||'').slice(0,6)),phone:prof.phone||'',sender:m.sender,message:m.message,created_at:m.created_at,read:!!m.read_at};
       });
     }
-    if(reviews.data) state.data.reviews=reviews.data.map(r=>({id:r.id,order_number:'',customer:r.profiles?.name||r.profiles?.email||'Cliente',rating:r.rating,comment:r.comment,product:'',date:r.created_at,answered:!!r.store_reply,answer:r.store_reply,tags:r.tags||[]}));
-    if(settings.data?.length){const store=settings.data.find(x=>x.key==='store')?.value||{};state.data.settings={...state.data.settings,store_name:store.name||state.data.settings.store_name,whatsapp:store.whatsapp||state.data.settings.whatsapp,description:store.description||state.data.settings.description,min_order:store.minimum_order||state.data.settings.min_order,delivery_fee:store.delivery_fee||state.data.settings.delivery_fee,free_delivery_from:store.free_delivery_from||state.data.settings.free_delivery_from};state.storeOpen=store.open!==false && store.paused!==true;}
+    if(reviewsData.length) state.data.reviews=reviewsData.map(r=>({id:r.id,order_number:'',customer:'Cliente',rating:r.rating,comment:r.comment,product:'',date:r.created_at,answered:!!r.store_reply,answer:r.store_reply,tags:r.tags||[]}));
+    if(settingsData.length){const store=settingsData.find(x=>x.key==='store')?.value||{};state.data.settings={...state.data.settings,store_name:store.name||state.data.settings.store_name,whatsapp:store.whatsapp||state.data.settings.whatsapp,description:store.description||state.data.settings.description,min_order:store.minimum_order||state.data.settings.min_order,delivery_fee:store.delivery_fee||state.data.settings.delivery_fee,free_delivery_from:store.free_delivery_from||state.data.settings.free_delivery_from};state.storeOpen=store.open!==false && store.paused!==true;}
     saveAll();
   }catch(e){console.warn('Supabase gestão:',e.message);toast('Alguns dados não carregaram do Supabase: '+e.message)}
 }
@@ -210,6 +217,14 @@ async function updateSupabase(table,payload,id){
 function money(v){return Number(v||0).toLocaleString("pt-BR",{style:"currency",currency:"BRL"})}
 function fmtDate(v){try{return new Date(v).toLocaleString("pt-BR",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"})}catch(e){return v}}
 function escapeHtml(str){return String(str??"").replace(/[&<>'"]/g,function(ch){return {"&":"&amp;","<":"&lt;",">":"&gt;","\'":"&#39;","\"":"&quot;"}[ch]||ch})}
+function showFatalError(title,error){
+  console.error(title,error);
+  const root=document.getElementById('root');
+  if(!root) return;
+  root.innerHTML=`<main class="login"><section class="login-box"><div class="logo"><div class="logo-mark"><span>🐺</span></div><div><h1>Husky Gestão</h1><p>Proteção contra tela branca</p></div></div><h2>${escapeHtml(title||'Erro na gestão')}</h2><p>A tela foi protegida para não ficar branca. Veja o detalhe e tente limpar a sessão.</p><div class="card" style="background:#fee2e2;color:#991b1b;font-weight:900">${escapeHtml(error?.message||error||'Erro desconhecido')}</div><div class="grid" style="margin-top:14px"><button class="btn blue" onclick="location.reload()">Recarregar</button><button class="btn outline" onclick="localStorage.removeItem('husky_admin_user');localStorage.removeItem('husky_gestao_auth_v1');location.reload()">Limpar sessão da gestão</button></div></section></main>`;
+}
+window.addEventListener('error',e=>showFatalError('Erro na gestão',e.error||e.message));
+window.addEventListener('unhandledrejection',e=>showFatalError('Erro de conexão na gestão',e.reason||e));
 function toast(msg){const el=document.getElementById("toast");el.textContent=msg;el.classList.remove("hidden");setTimeout(()=>el.classList.add("hidden"),2600)}
 function audit(action, details){state.data.audit.unshift({id:crypto.randomUUID?.()||Date.now(),user:state.user?.email||"local",action,details,created_at:new Date().toISOString()});saveAll()}
 function setRoute(route, sub="overview"){state.route=route;state.subroute=sub;state.selectedOrder=null;render()}
@@ -234,7 +249,16 @@ async function login(email,password){
   await loadSupabaseData(); setupGestaoRealtime(); render();
 }
 async function loadRole(userId){
-  try{const {data,error}=await db.from("admin_users").select("*").eq("user_id",userId).eq("active",true).single();if(error)return null;return data}catch(e){return null}
+  try{
+    const {data,error}=await db.from("admin_users").select("*").eq("user_id",userId).eq("active",true).single();
+    if(error)return null;
+    let permissions=data.permissions;
+    if(typeof permissions==='string'){
+      try{permissions=JSON.parse(permissions)}catch{permissions=[permissions]}
+    }
+    if(!Array.isArray(permissions)) permissions=['all'];
+    return {...data, permissions};
+  }catch(e){return null}
 }
 async function logout(){
   if (HAS_SUPABASE && db) {
@@ -262,9 +286,12 @@ function layout(content){
   return `<div class="app"><aside class="sidebar"><div class="logo"><div class="logo-mark"><img src="${assets.logo}" onerror="this.style.display='none'"><span>🐺</span></div><div><h1>Husky Gestão</h1><p>Controle total da confeitaria</p></div></div><div class="user-card"><small>${state.user.role}</small><strong>${state.user.name}</strong><p style="margin:4px 0 0;color:#777;font-weight:800;font-size:12px">${state.user.email}</p></div><nav class="nav">${navHtml}</nav><button class="btn outline" style="margin-top:20px;width:100%" onclick="logout()">Sair</button></aside><main class="main"><header class="topbar"><div><span class="pill ${state.storeOpen?'':'closed'}">${state.storeOpen?'🟢 Loja aberta':'🔴 Loja fechada'}</span> <span class="pill">${HAS_SUPABASE?'Supabase conectado':'Modo local sem Supabase'}</span></div><div class="toolbar"><button class="btn light" onclick="toggleSound()">${state.soundOn?'🔊 Som':'🔇 Sem som'}</button><button class="btn ${state.storeOpen?'red':'green'}" onclick="toggleStore()">${state.storeOpen?'Fechar loja':'Abrir loja'}</button><button class="btn blue" onclick="setRoute('orders')">Ver pedidos</button></div></header><section class="content">${content}</section></main><div class="mobile-menu"><nav class="nav">${mobileItems}</nav></div></div>`;
 }
 function title(title,desc,actions=""){return `<div class="title-row"><div><h2>${title}</h2><p>${desc}</p></div><div class="toolbar">${actions}</div></div>`}
-function render(){if(!ensureLogin())return; let html=""; const r=state.route;
-  if(r==="dashboard")html=dashboard(); if(r==="orders")html=ordersPage(); if(r==="production")html=productionPage(); if(r==="deliveries")html=deliveriesPage(); if(r==="products")html=productsPage(); if(r==="categories")html=genericCrud("Categorias","Organize o cardápio por grupos e horários.","categories",categoryFields()); if(r==="addons")html=genericCrud("Adicionais","Controle complementos, regras e disponibilidade.","addons",addonFields()); if(r==="inventory")html=inventoryPage(); if(r==="store")html=storePage(); if(r==="finance")html=financePage(); if(r==="coupons")html=couponsPage(); if(r==="customers")html=customersPage(); if(r==="reviews")html=reviewsPage(); if(r==="chat")html=chatPage(); if(r==="expenses")html=genericCrud("Despesas","Registre custos, comprovantes e categorias.","expenses",expenseFields()); if(r==="suppliers")html=genericCrud("Fornecedores","Cadastre contatos, compras e histórico.","suppliers",supplierFields()); if(r==="banners")html=genericCrud("Banners e feed","Gerencie promoções da home do cliente.","banners",bannerFields()); if(r==="notifications")html=notificationsPage(); if(r==="audit")html=auditPage(); if(r==="users")html=usersPage(); if(r==="issues")html=genericCrud("Chamados internos","Registre problemas, responsáveis e resolução.","issues",issueFields()); if(r==="refunds")html=genericCrud("Reembolsos","Controle reembolso total/parcial e aprovação.","refunds",refundFields()); if(r==="manual")html=manualOrdersPage(); if(r==="channels")html=channelsPage(); if(r==="schedule")html=schedulePage(); if(r==="loyalty")html=loyaltyPage(); if(r==="reports")html=reportsPage(); if(r==="settings")html=settingsPage(); if(r==="export")html=exportPage();
-  document.getElementById("root").innerHTML=layout(html);
+function render(){
+  try{
+    if(!ensureLogin())return; let html=""; const r=state.route;
+    if(r==="dashboard")html=dashboard(); if(r==="orders")html=ordersPage(); if(r==="production")html=productionPage(); if(r==="deliveries")html=deliveriesPage(); if(r==="products")html=productsPage(); if(r==="categories")html=genericCrud("Categorias","Organize o cardápio por grupos e horários.","categories",categoryFields()); if(r==="addons")html=genericCrud("Adicionais","Controle complementos, regras e disponibilidade.","addons",addonFields()); if(r==="inventory")html=inventoryPage(); if(r==="store")html=storePage(); if(r==="finance")html=financePage(); if(r==="coupons")html=couponsPage(); if(r==="customers")html=customersPage(); if(r==="reviews")html=reviewsPage(); if(r==="chat")html=chatPage(); if(r==="expenses")html=genericCrud("Despesas","Registre custos, comprovantes e categorias.","expenses",expenseFields()); if(r==="suppliers")html=genericCrud("Fornecedores","Cadastre contatos, compras e histórico.","suppliers",supplierFields()); if(r==="banners")html=genericCrud("Banners e feed","Gerencie promoções da home do cliente.","banners",bannerFields()); if(r==="notifications")html=notificationsPage(); if(r==="audit")html=auditPage(); if(r==="users")html=usersPage(); if(r==="issues")html=genericCrud("Chamados internos","Registre problemas, responsáveis e resolução.","issues",issueFields()); if(r==="refunds")html=genericCrud("Reembolsos","Controle reembolso total/parcial e aprovação.","refunds",refundFields()); if(r==="manual")html=manualOrdersPage(); if(r==="channels")html=channelsPage(); if(r==="schedule")html=schedulePage(); if(r==="loyalty")html=loyaltyPage(); if(r==="reports")html=reportsPage(); if(r==="settings")html=settingsPage(); if(r==="export")html=exportPage();
+    document.getElementById("root").innerHTML=layout(html||dashboard());
+  }catch(e){showFatalError('Erro ao renderizar a gestão',e)}
 }
 function toggleStore(){state.storeOpen=!state.storeOpen;state.data.notifications.unshift({id:Date.now(),type:"store",title:state.storeOpen?"Loja aberta":"Loja fechada",text:"Status alterado pela gestão",read:false,created_at:new Date().toISOString()});audit("store_status",state.storeOpen?"Aberta":"Fechada");saveAll();render()}
 function toggleSound(){state.soundOn=!state.soundOn;localStorage.setItem("husky_sound_on",JSON.stringify(state.soundOn));render()}

@@ -119,6 +119,14 @@
 
     function $(id){return document.getElementById(id)}
     function escapeHtml(v){return String(v??"").replace(/[&<>'"]/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#039;",'"':"&quot;"}[m]))}
+    function showFatalError(title,error){
+      console.error(title,error);
+      const root=document.getElementById('root');
+      if(!root) return;
+      root.innerHTML=`<div class="auth-wrap"><div class="auth-card"><div class="logo"><div class="logo-mark"><span>🐺</span></div><div class="logo-text"><strong>Husky</strong><small>Confeiteiro</small></div></div><h2 style="font-size:28px;margin:24px 0 8px;font-weight:1000">${escapeHtml(title||'Erro no app')}</h2><p class="muted">A tela foi protegida para não ficar branca. Veja o detalhe abaixo, limpe a sessão e tente novamente.</p><div class="message error">${escapeHtml(error?.message||error||'Erro desconhecido')}</div><button class="primary full mt" onclick="location.reload()">Recarregar</button><button class="outline full mt" onclick="localStorage.removeItem('husky_cliente_auth_v1');localStorage.removeItem('sb-${(state.config.url||'').split('//')[1]?.split('.')[0]||'project'}-auth-token');location.reload()">Limpar sessão do cliente</button></div></div>`;
+    }
+    window.addEventListener('error',e=>showFatalError('Erro no app do cliente',e.error||e.message));
+    window.addEventListener('unhandledrejection',e=>showFatalError('Erro de conexão no cliente',e.reason||e));
     function money(v){return (Number.isFinite(Number(v))?Number(v):0).toLocaleString("pt-BR",{style:"currency",currency:"BRL"})}
     function loadJson(k,d){try{return JSON.parse(localStorage.getItem(k)||JSON.stringify(d))}catch{return d}}
     function saveCart(){localStorage.setItem("husky_cart",JSON.stringify(state.cart))}
@@ -234,8 +242,12 @@
     function addCustom(product,qty,addOnIds,obs){ const key='c-'+product.id+'-'+Date.now(); state.cart[key]={cartKey:key,productId:product.id,qty,addOns:addOnIds,observation:obs}; saveCart(); state.productModal=null; render(); }
 
     function render(){
-      const s=summary();
-      $('root').innerHTML=`<div class="app"><div class="shell">${sidebar()}<main class="main">${header()}<div class="content">${content()}</div>${bottomNav()}</main></div></div>${s.totalItems&&state.page==='app'?cartBar(s):''}${state.productModal?productModal(state.productModal):''}`;
+      try{
+        const root=$('root');
+        if(!root) return;
+        const s=summary();
+        root.innerHTML=`<div class="app"><div class="shell">${sidebar()}<main class="main">${header()}<div class="content">${content()}</div>${bottomNav()}</main></div></div>${s.totalItems&&state.page==='app'?cartBar(s):''}${state.productModal?productModal(state.productModal):''}`;
+      }catch(e){showFatalError('Erro ao renderizar o app do cliente',e)}
     }
     function sidebar(){return `<aside class="sidebar">${logo()}<div class="nav-profile"><small>Cliente</small><strong>${escapeHtml(displayName())}</strong><span>${escapeHtml(state.user?.email||'Catálogo livre')}</span></div><nav class="side-nav">${nav.map(([k,l,i])=>`<button class="nav-btn ${state.tab===k?'active':''}" onclick="setTab('${k}')">${icon(i)}<span>${l}</span></button>`).join('')}</nav>${state.user?`<button class="logout" onclick="logout()">${icon('logout')} Sair</button>`:`<button class="logout" onclick="setTab('profile')">${icon('user')} Entrar</button>`}</aside>`}
     function header(){return `<header class="header"><div class="top-row"><div class="logo" style="display:flex;min-width:0">${logo()}</div><button class="location" onclick="useGps()"><small>Entregar em</small><strong>${escapeHtml(state.address)}</strong></button><div class="top-actions"><button class="icon-btn" onclick="setTab('menu')">${icon('search')}</button><button class="icon-btn" onclick="setTab('chat')">${icon('chat')}</button>${state.user?`<button class="dark" onclick="logout()" style="padding:12px 16px;display:none">Sair</button>`:`<button class="dark" onclick="setTab('profile')" style="padding:12px 16px">Entrar</button>`}</div></div><button class="search-box" style="width:100%;margin-top:12px;text-align:left" onclick="useGps()">${icon('map')}<span style="font-weight:1000;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(state.address)}</span></button></header>`}
@@ -338,6 +350,9 @@
         let result;
         if(a.mode==='register'){
           result=await state.supabase.auth.signUp({email:a.email,password:a.password,options:{data:{name:a.name,phone:a.phone,address:a.address}}});
+          if(result.error && /already|registered|exists/i.test(result.error.message||'')){
+            result=await state.supabase.auth.signInWithPassword({email:a.email,password:a.password});
+          }
         }else{
           result=await state.supabase.auth.signInWithPassword({email:a.email,password:a.password});
         }
@@ -394,7 +409,7 @@
     // Configuração removida da interface do cliente por segurança.
     // Edite APP_CONFIG no código antes de publicar.
 
-    (async function boot(){initSupabase();await loadProducts();await loadCoupons();render();})();
+    (async function boot(){try{initSupabase();await loadProducts();await loadCoupons();render();}catch(e){showFatalError('Erro ao iniciar o app do cliente',e)}})();
   </script>
 </body>
 </html>
