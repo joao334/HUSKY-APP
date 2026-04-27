@@ -1,0 +1,29 @@
+ALTERAÇÕES DE INTEGRAÇÃO REALIZADAS
+
+1. CLIENTE
+- Chat agora grava e lê a tabela public.chat_messages do Supabase.
+- Cliente recebe respostas da gestão em tempo real via Supabase Realtime.
+- Perfil do cliente agora tem edição de nome, WhatsApp, aniversário e endereço.
+- Login por código de e-mail usa Supabase Auth signInWithOtp/verifyOtp.
+- Ao validar o código, o app cria/atualiza public.profiles.
+- Pedidos continuam aparecendo apenas pela tabela customer_orders.
+
+2. GESTÃO
+- gestao.html agora usa o mesmo config.js do app do cliente.
+- Gestão carrega produtos, pedidos, clientes, chat, cupons, banners, avaliações e configurações do Supabase.
+- Alterar produto, disponibilidade, estoque, cupom, banner e configurações salva no Supabase quando conectado.
+- Responder chat no gestor envia mensagem para public.chat_messages e aparece no cliente.
+- Alterar status do pedido atualiza public.customer_orders e cria histórico em order_history.
+
+3. BANCO
+- Adicionado PATCH_INTEGRACAO_CLIENTE_GESTAO.sql.
+- Corrigidas policies de perfil, chat, pedidos e produtos.
+- Criado trigger em auth.users para criar perfil automaticamente.
+- Realtime ativado para chat_messages, customer_orders, products e profiles.
+
+4. IMPORTANTE
+- Para o código chegar por e-mail no app do cliente, configure no Supabase:
+  Authentication > Email Templates > Magic Link
+  e use {{ .Token }} no HTML do e-mail.
+- Depois rode PATCH_INTEGRACAO_CLIENTE_GESTAO.sql no SQL Editor.
+- Pagamento real ainda fica para a próxima etapa, conforme combinado.
