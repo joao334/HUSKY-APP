@@ -47,3 +47,11 @@ Dashboard, Pedidos, Produção, Entregas, Cardápio, Categorias, Adicionais, Est
 PAGAMENTO REAL
 O pedido só deve aparecer na gestão quando o gateway confirmar pagamento via Supabase Edge Function/webhook.
 Os exemplos estão na pasta edge-functions.
+
+
+ATUALIZAÇÃO DE INTEGRAÇÃO:
+1. Rode PATCH_INTEGRACAO_CLIENTE_GESTAO.sql no Supabase.
+2. Em Authentication > Email Templates > Magic Link, use {{ .Token }} para o cliente receber código.
+3. O chat do cliente agora grava em chat_messages e aparece no Gestor > Chat/Suporte.
+4. Perfil do cliente agora permite atualizar nome, WhatsApp, aniversário e endereço.
+5. Alterações de produto, cupom, banner e configurações na gestão são salvas no Supabase quando o gestor está conectado.

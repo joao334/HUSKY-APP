@@ -108,7 +108,7 @@
     const quickChat = ["Quero saber o prazo do meu pedido","Quero falar sobre pagamento","Tenho dúvida sobre sabores","Preciso alterar meu endereço","Quero enviar um feedback"];
 
     const state = {
-      supabase:null, session:null, user:null, configured:false,
+      supabase:null, session:null, user:null, configured:false, chatChannel:null, orderChannel:null,
       tab:"home", page:"app", products:[...fallbackProducts], coupons:[...fallbackCoupons],
       cart:loadJson("husky_cart",{}), orders:[], chatMessages:[], productModal:null,
       couponCode:"", fulfillment:"delivery", paymentMethod:"Pix", payment:null,
@@ -134,8 +134,14 @@
       if(!state.config.url || !state.config.anon || !window.supabase){ state.configured=false; return; }
       state.supabase = window.supabase.createClient(state.config.url,state.config.anon);
       state.configured=true;
-      state.supabase.auth.getSession().then(({data})=>{state.session=data.session;state.user=data.session?.user||null;loadProfile();loadOrders();render();});
-      state.supabase.auth.onAuthStateChange((_event,session)=>{state.session=session;state.user=session?.user||null;loadProfile();loadOrders();render();});
+      state.supabase.auth.getSession().then(async ({data})=>{
+        state.session=data.session;state.user=data.session?.user||null;
+        await loadProfile(); await loadOrders(); await loadChat(); subscribeRealtime(); render();
+      });
+      state.supabase.auth.onAuthStateChange(async (_event,session)=>{
+        state.session=session;state.user=session?.user||null;
+        await loadProfile(); await loadOrders(); await loadChat(); subscribeRealtime(); render();
+      });
     }
     async function loadProducts(){
       if(!state.supabase) return;
@@ -155,11 +161,49 @@
     }
     async function loadProfile(){
       if(!state.supabase||!state.user) return;
-      try{ const {data}=await state.supabase.from('profiles').select('*').eq('id',state.user.id).maybeSingle(); if(data){ state.address=data.address||state.address; state.user.profile=data; }}catch{}
+      try{
+        const {data,error}=await state.supabase.from('profiles').select('*').eq('id',state.user.id).maybeSingle();
+        if(error) throw error;
+        if(data){
+          state.address=data.address||state.address;
+          state.user.profile=data;
+          state.auth.name=data.name||state.auth.name;
+          state.auth.phone=data.phone||state.auth.phone;
+          state.auth.address=data.address||state.auth.address;
+        } else {
+          await upsertProfile();
+        }
+      }catch(e){console.warn('Perfil:',e.message)}
     }
     async function loadOrders(){
       if(!state.supabase||!state.user) return;
-      try{ const {data,error}=await state.supabase.from('customer_orders').select('*, order_items(*)').eq('user_id',state.user.id).order('created_at',{ascending:false}); if(error)throw error; state.orders=data||[]; render(); }catch(e){console.warn('Pedidos:',e.message)}
+      try{ const {data,error}=await state.supabase.from('customer_orders').select('*, order_items(*)').eq('user_id',state.user.id).order('created_at',{ascending:false}); if(error)throw error; state.orders=data||[]; }catch(e){console.warn('Pedidos:',e.message)}
+    }
+    async function loadChat(){
+      if(!state.supabase||!state.user){ state.chatMessages=[]; return; }
+      try{
+        const {data,error}=await state.supabase.from('chat_messages').select('*').eq('user_id',state.user.id).order('created_at',{ascending:true});
+        if(error) throw error;
+        state.chatMessages=(data||[]).map(row=>({
+          id:row.id,
+          from:row.sender==='customer'?'user':'husky',
+          text:row.message,
+          time:new Date(row.created_at).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}),
+          mascot: row.sender==='customer'?null:ASSETS.mascotDefault,
+          raw:row
+        }));
+      }catch(e){console.warn('Chat:',e.message)}
+    }
+    function subscribeRealtime(){
+      if(!state.supabase||!state.user) return;
+      if(state.chatChannel){ state.supabase.removeChannel(state.chatChannel); state.chatChannel=null; }
+      if(state.orderChannel){ state.supabase.removeChannel(state.orderChannel); state.orderChannel=null; }
+      state.chatChannel=state.supabase.channel('cliente-chat-'+state.user.id)
+        .on('postgres_changes',{event:'*',schema:'public',table:'chat_messages',filter:`user_id=eq.${state.user.id}`},async()=>{await loadChat();render();})
+        .subscribe();
+      state.orderChannel=state.supabase.channel('cliente-orders-'+state.user.id)
+        .on('postgres_changes',{event:'*',schema:'public',table:'customer_orders',filter:`user_id=eq.${state.user.id}`},async()=>{await loadOrders();render();})
+        .subscribe();
     }
 
     function cartItems(){
@@ -230,7 +274,18 @@
 
     function chatPage(){if(!state.user)return authRequired('Entre para usar o chat','O atendimento precisa do seu e-mail para localizar pedidos e histórico.');if(!state.chatMessages.length)state.chatMessages=[{from:'husky',text:'Oi! Eu sou o atendente virtual da Husky Confeiteiro. Como posso te ajudar hoje? 🐺💙',time:'agora',mascot:ASSETS.mascotWave}];return `<div class="chat-layout"><section class="chat-panel"><div class="chat-head"><div class="chat-avatar">${img(ASSETS.mascotDefault,'Atendente Husky','','🐺')}</div><div><h1 style="margin:0;font-size:26px;font-weight:1000">Chat Husky</h1><p style="margin:4px 0 0;color:var(--success);font-weight:900">Online para atendimento</p></div></div><div class="chat-box">${state.chatMessages.map(chatBubble).join('')}</div><div class="chat-input"><div class="quick-row">${quickChat.map(q=>`<button onclick="sendChat('${escapeHtml(q)}')">${q}</button>`).join('')}</div><div class="send-row"><input id="chatText" placeholder="Digite sua mensagem..." onkeydown="if(event.key==='Enter')sendChat()"><button class="primary" onclick="sendChat()">Enviar</button></div></div></section><aside><div class="whatsapp-card"><div class="mascot">${img(ASSETS.feedbackMascot,'Feedbacks Husky','','🐺')}</div><h2>Precisa de ajuda rápida?</h2><p>Fale pelo WhatsApp da loja quando precisar resolver algo urgente.</p><button class="secondary full" onclick="openWhatsApp()">Abrir WhatsApp</button></div><div class="card mt"><h3>Assuntos comuns</h3><p class="muted">• Status do pedido<br>• Pagamento Pix<br>• Troca de endereço<br>• Feedbacks e avaliações</p></div></aside></div>`}
     function chatBubble(m){const user=m.from==='user';return `<div class="bubble-row ${user?'user':''}">${!user?`<div class="chat-avatar" style="width:46px;height:46px">${img(m.mascot||ASSETS.mascotDefault,'Husky','','🐺')}</div>`:''}<div class="bubble ${user?'user':''}">${escapeHtml(m.text)}<small>${escapeHtml(m.time||'')}</small></div></div>`}
-    function sendChat(custom){const input=$('chatText');const text=(custom||input?.value||'').trim();if(!text)return;const now=new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});state.chatMessages.push({from:'user',text,time:now});state.chatMessages.push({from:'husky',text:autoReply(text),time:now,mascot:pickMascot(text)}); if(input)input.value='';render()} window.sendChat=sendChat;
+    async function sendChat(custom){
+      const input=$('chatText');const text=(custom||input?.value||'').trim();if(!text)return;
+      if(!state.user||!state.supabase){alert('Entre no app para enviar mensagem para a Husky.');return;}
+      const now=new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+      state.chatMessages.push({from:'user',text,time:now}); if(input)input.value=''; render();
+      try{
+        const orderId=state.orders?.[0]?.id||null;
+        const {error}=await state.supabase.from('chat_messages').insert({user_id:state.user.id,order_id:orderId,sender:'customer',message:text});
+        if(error) throw error;
+        await loadChat(); render();
+      }catch(e){alert('Não foi possível enviar para a gestão: '+e.message); await loadChat(); render();}
+    } window.sendChat=sendChat;
     function pickMascot(text){text=text.toLowerCase();if(text.includes('pix')||text.includes('pagamento'))return ASSETS.mascotThinking;if(text.includes('feedback')||text.includes('avalia'))return ASSETS.mascotHeart;if(text.includes('pedido')||text.includes('prazo'))return ASSETS.pedidosMascot;if(text.includes('sabor'))return ASSETS.mascotChef;if(text.includes('endereço')||text.includes('entrega'))return ASSETS.mascotBag;return ASSETS.mascotThumbs}
     function autoReply(text){const t=text.toLowerCase();if(t.includes('pedido')||t.includes('prazo'))return state.orders.length?`Encontrei seu último pedido ${state.orders[0].order_number||state.orders[0].id}. Acompanhe pela aba Pedidos.`:'Ainda não encontrei nenhum pedido pago no seu perfil. Depois que o pagamento for aprovado, ele aparece na aba Pedidos.';if(t.includes('pagamento')||t.includes('pix'))return 'O pedido só é enviado para a Husky após confirmação real do gateway. Se o Pix já foi pago, aguarde a confirmação automática.';if(t.includes('sabor'))return 'Hoje temos Lambe Lambe Brigadeiro, Abana Rabo e Uivo de Prestígio disponíveis.';if(t.includes('endereço')||t.includes('entrega'))return 'Você pode escolher entrega ou retirada na sacola antes de finalizar.';if(t.includes('feedback')||t.includes('avalia'))return 'Amei receber seu feedback! Conte como foi sua experiência.';return 'Entendi! Para atendimento urgente, toque em Abrir WhatsApp.'}
     function openWhatsApp(){window.open(`https://wa.me/${state.config.whatsapp}?text=${encodeURIComponent('Olá, Husky Confeiteiro! Vim pelo app e preciso de ajuda.')}`,'_blank','noopener,noreferrer')} window.openWhatsApp=openWhatsApp;
@@ -238,13 +293,58 @@
     function ordersPage(){if(!state.user)return authRequired('Entre para ver seus pedidos','Os pedidos pagos ficam vinculados ao seu e-mail.');if(!state.orders.length)return empty('🧾','Nenhum pedido pago ainda','Seu pedido só aparece aqui depois que o pagamento for aprovado.');return `<h1 style="font-size:34px;margin:0;font-weight:1000">Pedidos</h1><p class="muted">Somente pedidos com pagamento aprovado são enviados para a loja.</p><div class="product-grid mt">${state.orders.map(orderCard).join('')}</div>`}
     function orderCard(o){return `<div class="card"><div style="display:flex;justify-content:space-between;gap:12px"><div><small style="font-weight:1000;color:var(--blue)">Pedido ${escapeHtml(o.order_number||o.id)}</small><h2>Acompanhe seu pedido</h2><p class="muted">Total ${money(o.total)}</p></div><div class="icon-btn" style="width:60px;height:60px">🛍️</div></div><div class="note success">Pagamento aprovado • ${escapeHtml(o.payment_method||'Pix')}</div><div class="note">${(o.order_items||[]).map(i=>`${i.quantity}x ${escapeHtml(i.product_name)}`).join('<br>')||'Itens do pedido'}</div><div class="item-list mt">${statusSteps.map((st,i)=>`<div style="display:flex;gap:10px;align-items:center"><span class="icon-btn" style="width:34px;height:34px;background:${i<=0?'var(--blue)':'white'};color:${i<=0?'white':'#d1d5db'}">${icon('check')}</span><strong style="color:${i<=0?'var(--ink)':'#9ca3af'}">${st}</strong></div>`).join('')}</div></div>`}
     function couponsPage(){return `<h1 style="font-size:34px;margin:0;font-weight:1000">Cupons</h1><p class="muted">Escolha um cupom para usar na sacola.</p><div class="product-grid mt">${state.coupons.map(c=>`<button class="card" style="text-align:left;border:2px solid ${state.couponCode===c.code?'var(--blue)':'white'}" onclick="state.couponCode='${escapeHtml(c.code)}';setTab('menu')"><small style="font-weight:1000;color:var(--blue)">${escapeHtml(c.code)}</small><h2>${escapeHtml(c.title||c.code)}</h2><p class="muted">${escapeHtml(c.description||'Cupom Husky')}</p></button>`).join('')}</div>`}
-    function profilePage(){if(!state.user)return authRequired('Entre no seu perfil','Cadastre e valide seu e-mail para salvar endereço, cupons e pedidos.');return `<div style="display:flex;gap:16px;align-items:center"><div class="icon-btn" style="width:80px;height:80px;font-size:38px;background:var(--cream)">😊</div><div><h1 style="font-size:34px;margin:0;font-weight:1000">${escapeHtml(displayName())}</h1><p class="muted" style="color:var(--blue)">Cliente Husky</p></div></div><div class="profile-grid mt"><div class="info"><small>Nome</small><strong>${escapeHtml(displayName())}</strong></div><div class="info"><small>E-mail</small><strong>${escapeHtml(state.user.email||'')}</strong></div><div class="info wide"><small>Endereço</small><strong>${escapeHtml(state.address)}</strong></div>${['Cupons','Favoritos','Notificações','Segurança','Ajuda e suporte','Histórico de pedidos'].map(x=>`<button class="info" style="text-align:left"><strong>${x}</strong></button>`).join('')}</div><button class="outline mt" onclick="logout()">Sair da conta</button>`}
+    function profilePage(){
+      if(!state.user)return authRequired('Entre no seu perfil','Cadastre e valide seu e-mail para salvar endereço, cupons e pedidos.');
+      const p=state.user.profile||{};
+      return `<div style="display:flex;gap:16px;align-items:center"><div class="icon-btn" style="width:80px;height:80px;font-size:38px;background:var(--cream)">😊</div><div><h1 style="font-size:34px;margin:0;font-weight:1000">${escapeHtml(displayName())}</h1><p class="muted" style="color:var(--blue)">Cliente Husky</p></div></div>
+      <div class="card mt"><h2>Atualizar meus dados</h2><p class="muted">Esses dados são salvos no Supabase e aparecem para a gestão quando você manda mensagem ou faz pedido.</p>
+        <div class="profile-grid mt">
+          <label class="input-field"><span>Nome</span><div class="input-shell">${icon('user')}<input id="pfName" value="${escapeHtml(p.name||displayName())}"></div></label>
+          <label class="input-field"><span>E-mail</span><div class="input-shell">${icon('mail')}<input value="${escapeHtml(state.user.email||'')}" disabled></div></label>
+          <label class="input-field"><span>WhatsApp</span><div class="input-shell">${icon('chat')}<input id="pfPhone" value="${escapeHtml(p.phone||state.auth.phone||'')}"></div></label>
+          <label class="input-field"><span>Aniversário</span><div class="input-shell">${icon('star')}<input id="pfBirthday" type="date" value="${escapeHtml(p.birthday||'')}"></div></label>
+          <label class="input-field wide"><span>Endereço completo</span><div class="input-shell">${icon('map')}<input id="pfAddress" value="${escapeHtml(p.address||state.address||'')}"></div></label>
+        </div>
+        <button class="primary mt" onclick="saveProfile()">Salvar dados</button>
+        <button class="outline mt" onclick="useGps()">Usar localização atual</button>
+      </div>
+      <div class="profile-grid mt">${['Cupons','Favoritos','Notificações','Segurança','Ajuda e suporte','Histórico de pedidos'].map(x=>`<button class="info" style="text-align:left"><strong>${x}</strong></button>`).join('')}</div><button class="outline mt" onclick="logout()">Sair da conta</button>`}
+    async function saveProfile(){
+      if(!state.supabase||!state.user){alert('Você precisa estar logado.');return;}
+      const payload={id:state.user.id,email:state.user.email,name:$('pfName')?.value||displayName(),phone:$('pfPhone')?.value||'',address:$('pfAddress')?.value||'',birthday:$('pfBirthday')?.value||null};
+      try{const {error}=await state.supabase.from('profiles').upsert(payload); if(error)throw error; state.address=payload.address||state.address; state.user.profile=payload; state.auth.address=payload.address; alert('Dados atualizados.'); render();}
+      catch(e){alert('Erro ao salvar perfil: '+e.message)}
+    } window.saveProfile=saveProfile;
     function authRequired(title,sub){return `<div class="auth-wrap"><div style="width:100%;max-width:520px"><div class="card" style="text-align:center;margin-bottom:14px"><div class="icon-btn" style="width:78px;height:78px;margin:0 auto;font-size:40px">🐺</div><h2 style="font-size:25px;margin-top:14px">${title}</h2><p class="muted">${sub}</p></div>${authPanel(true)}</div></div>`}
     function authPanel(compact=false){const a=state.auth;return `<section class="auth-card"><div>${logo()}<h2 style="font-size:30px;margin:28px 0 0;font-weight:1000">${a.step==='code'?'Verifique seu e-mail':'Entrar ou criar conta'}</h2><p class="muted">${a.step==='code'?`Digite o código enviado para ${escapeHtml(a.email)}.`:'Você pode navegar sem conta. Para pagar, valide seu e-mail.'}</p></div>${a.step==='form'?`<div>${a.mode==='register'?input('Nome','name','user'):''}${input('E-mail','email','mail')}${a.mode==='register'?input('WhatsApp','phone','chat')+input('Endereço','address','map'):''}</div>`:`<div>${input('Código de verificação','code','shield')}<div class="message">Login real: o código deve ser enviado e validado pelo Supabase Auth.</div></div>`}${a.message?`<div class="message ${a.message.includes('Erro')||a.message.includes('inválido')?'error':'ok'}">${escapeHtml(a.message)}</div>`:''}<button class="primary full mt" onclick="${a.step==='form'?'sendCode()':'verifyCode()'}">${a.step==='form'?'Enviar código por e-mail':'Validar código'}</button>${a.step==='form'?`<button class="outline full mt" onclick="state.auth.mode=state.auth.mode==='register'?'login':'register';render()">${a.mode==='register'?'Já tenho conta':'Criar conta'}</button>`:`<button class="outline full mt" onclick="state.auth.step='form';render()">Trocar e-mail</button>`}</section>`}
     function input(label,key,ic){return `<label class="input-field"><span>${label}</span><div class="input-shell">${icon(ic)}<input value="${escapeHtml(state.auth[key]||'')}" oninput="state.auth.${key}=this.value" placeholder="${label}"></div></label>`}
-    async function sendCode(){const a=state.auth;if(!a.email.includes('@')){a.message='Digite um e-mail válido.';render();return}a.message='Enviando código...';render();if(!state.supabase){a.message='Supabase ainda não está configurado. Edite o arquivo config.js com Project URL e anon public key.';render();return}try{const {error}=await state.supabase.auth.signInWithOtp({email:a.email,options:{shouldCreateUser:true,data:{name:a.name,phone:a.phone,address:a.address}}});if(error)throw error;a.step='code';a.message='Código enviado para seu e-mail.';render()}catch(e){a.message='Erro ao enviar código: '+e.message;render()}} window.sendCode=sendCode;
-    async function verifyCode(){const a=state.auth;if(a.code.trim().length<4){a.message='Digite o código recebido.';render();return}a.message='Validando...';render();try{const {data,error}=await state.supabase.auth.verifyOtp({email:a.email,token:a.code,type:'email'});if(error)throw error;state.session=data.session;state.user=data.user;await upsertProfile();state.address=a.address||state.address;a.message='';state.tab='home';state.page='app';loadOrders();render()}catch(e){a.message='Código inválido ou expirado: '+e.message;render()}} window.verifyCode=verifyCode;
-    async function upsertProfile(){if(!state.supabase||!state.user)return;const a=state.auth;try{await state.supabase.from('profiles').upsert({id:state.user.id,name:a.name||state.user.email?.split('@')[0],email:state.user.email,phone:a.phone,address:a.address})}catch(e){console.warn(e.message)}}
+    async function sendCode(){
+      const a=state.auth;if(!a.email.includes('@')){a.message='Digite um e-mail válido.';render();return}
+      a.message='Enviando código...';render();
+      if(!state.supabase){a.message='Supabase ainda não está configurado. Edite o arquivo config.js com Project URL e anon public key.';render();return}
+      try{
+        const {error}=await state.supabase.auth.signInWithOtp({email:a.email,options:{shouldCreateUser:true,emailRedirectTo:window.location.href.split('#')[0],data:{name:a.name,phone:a.phone,address:a.address}}});
+        if(error)throw error;
+        a.step='code';a.message='Código enviado para seu e-mail. Se chegar link em vez de código, ajuste o template Magic Link para usar {{ .Token }}.';render();
+      }catch(e){a.message='Erro ao enviar código: '+e.message;render()}
+    } window.sendCode=sendCode;
+    async function verifyCode(){
+      const a=state.auth;if(a.code.trim().length<4){a.message='Digite o código recebido.';render();return}
+      a.message='Validando...';render();
+      try{
+        const {data,error}=await state.supabase.auth.verifyOtp({email:a.email,token:a.code,type:'email'});if(error)throw error;
+        state.session=data.session;state.user=data.user;
+        await upsertProfile(); await loadProfile(); await loadOrders(); await loadChat(); subscribeRealtime();
+        state.address=state.user?.profile?.address||a.address||state.address;a.message='';state.tab='home';state.page='app';render();
+      }catch(e){a.message='Código inválido ou expirado: '+e.message;render()}
+    } window.verifyCode=verifyCode;
+    async function upsertProfile(){
+      if(!state.supabase||!state.user)return;
+      const a=state.auth;
+      const metadata=state.user.user_metadata||{};
+      const payload={id:state.user.id,name:a.name||metadata.name||state.user.email?.split('@')[0],email:state.user.email,phone:a.phone||metadata.phone||'',address:a.address||metadata.address||state.address};
+      try{await state.supabase.from('profiles').upsert(payload);state.user.profile=payload;}catch(e){console.warn(e.message)}
+    }
     async function logout(){if(state.supabase) await state.supabase.auth.signOut();state.user=null;state.session=null;state.orders=[];render()} window.logout=logout;
 
     function productModal(p){let qty=1, selected=[], obs='';setTimeout(()=>{const q=$('modalQty'); if(q) q.textContent=qty},0);window.modalAddOn=(id)=>{selected=selected.includes(id)?selected.filter(x=>x!==id):[...selected,id];document.querySelectorAll('[data-addon]').forEach(b=>b.classList.toggle('active',selected.includes(b.dataset.addon)))};window.modalQty=(d)=>{qty=Math.max(1,qty+d);$('modalQty').textContent=qty;$('modalTotal').textContent=money(qty*(Number(p.price)+selected.map(id=>addOns.find(a=>a.id===id)?.price||0).reduce((s,v)=>s+v,0)))};window.modalAdd=()=>{obs=$('modalObs').value;addCustom(p,qty,selected,obs)};return `<div class="modal"><div class="modal-card"><div class="modal-img">${img(p.image_url,p.name,'','🐺')}</div><div class="modal-body"><div class="modal-title-row"><div><h2 style="font-size:30px;margin:0;font-weight:1000">${escapeHtml(p.name)}</h2><p class="muted">${escapeHtml(p.weight||'250g a 260g')} • ${escapeHtml(p.size||'250 ml')}</p></div><button class="close" onclick="state.productModal=null;render()">×</button></div><p class="muted">${escapeHtml(p.details||p.description||'')}</p><div class="note warn">${escapeHtml(p.allergens||'Consulte alergênicos com a loja.')}</div><h3>Adicionais</h3>${addOns.map(a=>`<button class="add-on" data-addon="${a.id}" onclick="modalAddOn('${a.id}');modalQty(0)"><span>${a.name}</span><strong>${a.price?money(a.price):'Grátis'}</strong></button>`).join('')}<label class="input-field"><span>Observação</span><textarea id="modalObs" placeholder="Ex: enviar colher, caprichar na embalagem..."></textarea></label><div class="price-row mt"><div class="qty"><button class="minus" onclick="modalQty(-1)">${icon('minus')}</button><strong id="modalQty">1</strong><button class="plus" onclick="modalQty(1)">${icon('plus')}</button></div><button class="primary" onclick="modalAdd()">Adicionar • <span id="modalTotal">${money(p.price)}</span></button></div></div></div></div>`}
