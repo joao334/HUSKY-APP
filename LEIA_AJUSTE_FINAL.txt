@@ -1,0 +1,9 @@
+AJUSTE FINAL APLICADO
+
+1. Pedidos manuais agora são salvos em customer_orders + order_items no Supabase.
+2. Se o Supabase falhar, o pedido manual fica local e não some no refresh.
+3. Chat da gestão atualiza a cada 650ms + realtime.
+4. Chat do cliente atualiza a cada 700ms + realtime.
+5. Pop-up no canto inferior direito da gestão quando chegar mensagem nova do cliente.
+6. Antes de testar, rode o SQL: PATCH_FINAL_PEDIDOS_CHAT_RAPIDO.sql
+7. Depois suba todos os arquivos na Vercel e limpe sessões antigas em /limpar-sessoes.html
