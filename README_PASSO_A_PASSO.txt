@@ -105,3 +105,7 @@ IMPORTANTE
 ----------
 Sem Edge Function de Pix configurada, o app mostra o fluxo visual, mas não cria pedido pago real.
 Isso evita o erro de criar pedido falso como se estivesse pago.
+
+ATUALIZAÇÃO DESTA VERSÃO
+- A pasta assets/husky agora já vem preenchida com os arquivos enviados da Husky.
+- Se alguma imagem não aparecer, confira se o nome do arquivo não foi alterado pelo Windows.
