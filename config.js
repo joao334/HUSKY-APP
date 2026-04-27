@@ -5,9 +5,13 @@ window.HUSKY_CONFIG = {
   supabaseUrl: "https://wnhmcbozesilmokyemgh.supabase.co",
   supabaseAnonKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InduaG1jYm96ZXNpbG1va3llbWdoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcyNzA5NzEsImV4cCI6MjA5Mjg0Njk3MX0.yGJbHmnK4jIFsy5RRnf8YhUURqDjxwGM8mnLCBQ3H5s",
 
-  // Funções Edge do Supabase. Crie depois que o banco estiver funcionando.
-  pixFunction: "create-pix-payment",
-  checkFunction: "check-payment-status",
+  // Pagamento InfinitePay via Supabase Edge Functions.
+  // O cliente será redirecionado para a InfinitePay e volta para retorno-pagamento.html.
+  paymentProvider: "infinitepay",
+  infinitePayHandle: "huskybolos",
+  checkoutFunction: "create-infinitepay-checkout",
+  checkFunction: "check-infinitepay-payment",
+  paymentReturnUrl: "https://husky-app.vercel.app/retorno-pagamento.html",
 
   // Coloque o número real da Husky. Exemplo: 5511999999999
   whatsapp: "5511945198349",

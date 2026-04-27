@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Pagamento - Husky Confeiteiro</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="config.js"></script>
+  <style>
+    body{margin:0;min-height:100vh;display:grid;place-items:center;background:#f5f5f0;font-family:Arial,Helvetica,sans-serif;color:#171717;padding:20px}
+    .card{max-width:520px;width:100%;background:#fff;border-radius:30px;padding:28px;box-shadow:0 18px 50px rgba(23,23,23,.10);text-align:center}
+    .logo{width:88px;height:88px;border-radius:28px;margin:0 auto 18px;background:#3b6da6;display:grid;place-items:center;font-size:42px}
+    h1{font-size:30px;line-height:1;margin:0 0 12px;font-weight:900}
+    p{color:#5f6368;line-height:1.6;font-weight:700}
+    .msg{background:#f5f5f0;border-radius:18px;padding:14px;margin:18px 0;font-weight:800}
+    .ok{background:#ecfdf5;color:#047857}.warn{background:#fffbeb;color:#92400e}.err{background:#fef2f2;color:#991b1b}
+    a,button{display:inline-flex;justify-content:center;align-items:center;text-decoration:none;border:0;border-radius:18px;padding:14px 18px;font-weight:900;margin:6px;background:#3b6da6;color:#fff;cursor:pointer}
+    .secondary{background:#171717}
+  </style>
+</head>
+<body>
+  <main class="card">
+    <div class="logo">🐺</div>
+    <h1>Verificando pagamento</h1>
+    <p>Estamos consultando se a InfinitePay já confirmou seu pagamento. O pedido só aparece na gestão depois da confirmação real.</p>
+    <div id="status" class="msg warn">Aguardando confirmação...</div>
+    <div>
+      <button onclick="checkPayment()">Verificar novamente</button>
+      <a class="secondary" href="./">Voltar para o app</a>
+    </div>
+  </main>
+
+<script>
+const config = window.HUSKY_CONFIG || {};
+const url = config.supabaseUrl || "";
+const anon = config.supabaseAnonKey || "";
+const supabaseClient = url && anon && window.supabase ? window.supabase.createClient(url, anon, {
+  auth: {
+    storageKey: "husky_cliente_auth_v1",
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: false
+  }
+}) : null;
+
+function getOrderNsu(){
+  const params = new URLSearchParams(location.search);
+  return params.get("order_nsu") || params.get("orderNsu") || sessionStorage.getItem("husky_last_order_nsu") || "";
+}
+
+async function checkPayment(){
+  const box = document.getElementById("status");
+  const orderNsu = getOrderNsu();
+  if(!supabaseClient){
+    box.className = "msg err";
+    box.textContent = "Supabase não configurado no config.js.";
+    return;
+  }
+  if(!orderNsu){
+    box.className = "msg err";
+    box.textContent = "Não encontrei o número do pedido para consultar.";
+    return;
+  }
+  box.className = "msg warn";
+  box.textContent = "Consultando pedido " + orderNsu + "...";
+  try{
+    const { data, error } = await supabaseClient.functions.invoke(config.checkFunction || "check-infinitepay-payment", {
+      body: { orderNsu }
+    });
+    if(error) throw error;
+    if(data && data.paid){
+      box.className = "msg ok";
+      box.textContent = "Pagamento confirmado! Seu pedido já foi enviado para a gestão da Husky.";
+      try{ localStorage.removeItem("husky_cart"); }catch(e){}
+      setTimeout(()=>{ location.href = "./?tab=orders"; }, 1800);
+    }else{
+      box.className = "msg warn";
+      box.textContent = "Pagamento ainda não confirmado pela InfinitePay. Aguarde alguns segundos e clique em verificar novamente.";
+    }
+  }catch(e){
+    box.className = "msg err";
+    box.textContent = "Não foi possível consultar agora: " + (e.message || e);
+  }
+}
+checkPayment();
+</script>
+</body>
+</html>

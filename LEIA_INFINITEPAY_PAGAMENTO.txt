@@ -1,35 +1,3 @@
-HUSKY CONFEITEIRO - SISTEMA CLIENTE + GESTÃO
-
-Arquivos principais:
-- index.html: aplicativo do cliente
-- gestao.html: aplicativo da gestão
-- config.js: configuração pública do Supabase e WhatsApp
-- SUPABASE_SQL_COMPLETO.sql: rode no Supabase SQL Editor
-- SQL_CHAT_WHATSAPP_E_PERMISSOES.sql: rode depois, para garantir chat cliente <-> gestão
-- CRIAR_ADMIN_DEPOIS_DO_LOGIN.sql: modelo para liberar seu usuário como admin
-
-COMO PUBLICAR NA VERCEL:
-1. Suba TODOS os arquivos da raiz desta pasta.
-2. O cliente abre em: https://seu-link.vercel.app/
-3. A gestão abre em: https://seu-link.vercel.app/gestao.html
-
-O QUE ESTÁ PRONTO:
-- Cliente com cardápio, carrinho, cupons, perfil editável, endereço, chat e pedidos.
-- Gestão completa com dashboard, pedidos, produção, entregas, cardápio, estoque, financeiro, cupons, clientes, avaliações, chat estilo WhatsApp, relatórios, usuários e configurações.
-- Chat estilo WhatsApp na gestão: lista de conversas, bolhas, respostas rápidas, envio em tempo real e WhatsApp externo.
-- Tudo usa o mesmo Supabase.
-
-ANTES DE TESTAR:
-1. No Supabase, rode SUPABASE_SQL_COMPLETO.sql.
-2. Depois rode SQL_CHAT_WHATSAPP_E_PERMISSOES.sql.
-3. Crie seu usuário em Authentication > Users.
-4. Libere o usuário na tabela admin_users usando o SQL de admin.
-5. Confira o config.js com sua URL e anon key.
-
-PAGAMENTO:
-A estrutura de Pix/Edge Functions está incluída, mas pagamento real depende de configurar Mercado Pago/Asaas/Pagar.me e webhook. Não coloque tokens secretos no config.js.
-
-
 HUSKY CONFEITEIRO - SISTEMA CLIENTE + GESTÃO + INFINITEPAY
 
 Arquivos principais:
