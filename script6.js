@@ -1,39 +1,4 @@
-<!doctype html>
-<html lang="pt-BR">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Gestão Husky Confeiteiro</title>
-  <script src="config.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <style>
-    :root{
-      --blue:#3b6da6;--blue2:#577fac;--cream:#edd8ab;--paper:#f5f5f0;--brown:#5f442e;--ink:#171717;--muted:#6b7280;--line:#e8e8e3;--white:#fff;
-      --green:#16a34a;--red:#dc2626;--yellow:#d97706;--purple:#7c3aed;--shadow:0 18px 50px rgba(23,23,23,.08);--radius:26px;
-    }
-    *{box-sizing:border-box} body{margin:0;background:var(--paper);font-family:Inter,Arial,Helvetica,sans-serif;color:var(--ink)}
-    button,input,select,textarea{font:inherit} button{cursor:pointer;border:0} .hidden{display:none!important}
-    .app{min-height:100vh;display:grid;grid-template-columns:292px 1fr;gap:0}.sidebar{background:#fff;border-right:1px solid var(--line);padding:22px;position:sticky;top:0;height:100vh;overflow:auto}.main{min-width:0}.topbar{height:82px;background:rgba(255,255,255,.92);backdrop-filter:blur(14px);border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;padding:0 28px;position:sticky;top:0;z-index:20}.content{padding:26px;max-width:1500px;margin:0 auto}.logo{display:flex;align-items:center;gap:12px}.logo-mark{width:54px;height:54px;border-radius:18px;background:linear-gradient(135deg,var(--blue),var(--blue2));display:grid;place-items:center;overflow:hidden;box-shadow:0 10px 26px rgba(59,109,166,.22)}.logo-mark img{width:100%;height:100%;object-fit:cover}.logo h1{font-size:18px;line-height:1;margin:0;font-weight:900}.logo p{font-size:12px;margin:3px 0 0;color:var(--brown);font-weight:800}.user-card{margin:24px 0;background:var(--paper);border-radius:24px;padding:16px}.user-card small{color:#9ca3af;font-weight:900;text-transform:uppercase;letter-spacing:.08em}.user-card strong{display:block;margin-top:4px;font-size:16px}.nav{display:grid;gap:8px}.nav button{background:transparent;color:#6b7280;display:flex;align-items:center;gap:12px;padding:13px 14px;border-radius:17px;text-align:left;font-weight:900}.nav button.active,.nav button:hover{background:var(--blue);color:#fff}.nav .group-title{font-size:11px;color:#9ca3af;text-transform:uppercase;letter-spacing:.12em;font-weight:900;margin:18px 10px 6px}.pill{display:inline-flex;align-items:center;gap:8px;border-radius:999px;padding:8px 12px;background:var(--paper);font-weight:900;font-size:12px}.btn{border-radius:16px;padding:12px 16px;background:var(--ink);color:#fff;font-weight:900;display:inline-flex;align-items:center;gap:9px;justify-content:center}.btn.blue{background:var(--blue)}.btn.cream{background:var(--cream);color:var(--ink)}.btn.light{background:var(--paper);color:var(--ink)}.btn.green{background:var(--green)}.btn.red{background:var(--red)}.btn.outline{background:#fff;color:var(--ink);border:2px solid var(--ink)}.btn:disabled{opacity:.45;cursor:not-allowed}.title-row{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:22px}.title-row h2{margin:0;font-size:34px;line-height:1;font-weight:950;letter-spacing:-.04em}.title-row p{margin:8px 0 0;color:var(--muted);font-weight:700}.grid{display:grid;gap:16px}.grid.cols-2{grid-template-columns:repeat(2,minmax(0,1fr))}.grid.cols-3{grid-template-columns:repeat(3,minmax(0,1fr))}.grid.cols-4{grid-template-columns:repeat(4,minmax(0,1fr))}.card{background:#fff;border-radius:var(--radius);box-shadow:var(--shadow);padding:20px}.metric{background:#fff;border-radius:24px;padding:20px;box-shadow:var(--shadow);position:relative;overflow:hidden}.metric::after{content:"";position:absolute;right:-18px;top:-18px;width:80px;height:80px;background:var(--cream);border-radius:999px;opacity:.45}.metric small{font-size:12px;color:#9ca3af;font-weight:900;text-transform:uppercase;letter-spacing:.08em}.metric strong{display:block;font-size:28px;margin-top:8px;font-weight:950;letter-spacing:-.04em}.metric span{display:block;margin-top:8px;font-size:12px;color:var(--muted);font-weight:800}.toolbar{display:flex;flex-wrap:wrap;gap:10px;margin:0 0 16px}.field{display:grid;gap:7px}.field label{font-size:12px;font-weight:900;color:#6b7280;text-transform:uppercase;letter-spacing:.06em}.field input,.field select,.field textarea{border:0;outline:0;border-radius:16px;background:var(--paper);padding:13px 14px;font-weight:800;color:var(--ink);width:100%}.field textarea{min-height:95px;resize:vertical}.table-wrap{background:#fff;border-radius:var(--radius);box-shadow:var(--shadow);overflow:auto}.table{width:100%;border-collapse:collapse;min-width:900px}.table th{font-size:11px;color:#9ca3af;text-transform:uppercase;letter-spacing:.08em;text-align:left;padding:15px;background:#fafaf7}.table td{padding:15px;border-top:1px solid var(--line);font-weight:750;vertical-align:middle}.status{border-radius:999px;padding:7px 10px;font-size:11px;font-weight:950;display:inline-flex;align-items:center;gap:6px}.status.paid,.status.open,.status.ready,.status.active{background:#dcfce7;color:#166534}.status.pending,.status.production,.status.warning{background:#fef3c7;color:#92400e}.status.cancelled,.status.low,.status.closed{background:#fee2e2;color:#991b1b}.status.info,.status.delivery{background:#dbeafe;color:#1e40af}.kanban{display:grid;grid-template-columns:repeat(4,minmax(240px,1fr));gap:16px;overflow:auto}.column{background:#fff;border-radius:24px;padding:14px;box-shadow:var(--shadow);min-height:420px}.column h3{margin:4px 4px 14px;font-size:15px;font-weight:950}.order-card{border:1px solid var(--line);border-radius:20px;padding:14px;margin-bottom:12px;background:#fff}.order-card h4{margin:0;font-size:16px}.order-card p{margin:6px 0;color:var(--muted);font-size:13px;font-weight:700}.order-card .actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}.split{display:grid;grid-template-columns:1.3fr .7fr;gap:16px}.modal{position:fixed;inset:0;background:rgba(0,0,0,.42);z-index:60;display:grid;place-items:center;padding:18px}.modal-box{width:min(880px,100%);max-height:92vh;overflow:auto;background:#fff;border-radius:30px;box-shadow:0 40px 100px rgba(0,0,0,.24)}.modal-head{padding:22px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;gap:14px;align-items:flex-start}.modal-head h3{margin:0;font-size:26px;font-weight:950}.modal-body{padding:22px}.timeline{display:grid;gap:12px}.timeline-item{display:flex;gap:12px}.dot{width:13px;height:13px;border-radius:999px;background:var(--blue);margin-top:4px;flex:0 0 auto}.empty{padding:60px 20px;text-align:center;color:var(--muted);font-weight:800}.toast{position:fixed;right:20px;bottom:20px;background:var(--ink);color:#fff;padding:14px 18px;border-radius:18px;font-weight:900;z-index:100;box-shadow:var(--shadow)}.mobile-menu{display:none}.login{min-height:100vh;display:grid;place-items:center;padding:22px}.login-box{width:min(460px,100%);background:#fff;border-radius:32px;box-shadow:var(--shadow);padding:24px}.login-box h2{font-size:32px;margin:24px 0 8px;font-weight:950;letter-spacing:-.04em}.login-box p{color:var(--muted);font-weight:750}.print-only{display:none}.mini-img{width:46px;height:46px;border-radius:14px;object-fit:cover;background:var(--paper)}.section-tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px}.section-tabs button{border-radius:999px;padding:9px 13px;background:#fff;font-weight:900;color:#6b7280}.section-tabs button.active{background:var(--ink);color:#fff}.form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.wide{grid-column:1/-1}.badge{font-size:10px;font-weight:950;border-radius:999px;padding:5px 8px;background:var(--cream)}.charts{display:grid;grid-template-columns:1fr 1fr;gap:16px}.bar{height:10px;background:var(--paper);border-radius:99px;overflow:hidden}.bar span{display:block;height:100%;background:var(--blue);border-radius:99px}.sound-toggle{display:flex;align-items:center;gap:10px}.switch{width:52px;height:30px;border-radius:999px;background:#ddd;padding:3px}.switch span{display:block;width:24px;height:24px;border-radius:999px;background:#fff;transition:.18s}.switch.on{background:var(--blue)}.switch.on span{transform:translateX(22px)}
 
-    .wa-shell{display:grid;grid-template-columns:340px 1fr;min-height:680px;background:#fff;border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden}
-    .wa-list{border-right:1px solid var(--line);background:#fbfbf8;min-width:0;display:flex;flex-direction:column}
-    .wa-list-head{padding:18px;border-bottom:1px solid var(--line);background:#fff}
-    .wa-search{display:flex;gap:8px;align-items:center;background:var(--paper);border-radius:18px;padding:10px 12px;margin-top:12px}.wa-search input{border:0;background:transparent;outline:0;width:100%;font-weight:800}
-    .wa-contact-list{overflow:auto;flex:1}.wa-contact{width:100%;display:flex;gap:12px;align-items:center;padding:14px 16px;background:transparent;border-bottom:1px solid rgba(232,232,227,.7);text-align:left}.wa-contact:hover,.wa-contact.active{background:#fff}
-    .wa-avatar{width:50px;height:50px;border-radius:18px;background:linear-gradient(135deg,var(--blue),var(--cream));display:grid;place-items:center;color:#fff;font-weight:950;flex:0 0 auto;overflow:hidden}.wa-contact-main{min-width:0;flex:1}.wa-contact-main strong{display:block;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.wa-contact-main span{display:block;margin-top:4px;color:var(--muted);font-size:12px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.wa-contact-meta{text-align:right;display:grid;gap:5px;justify-items:end}.wa-contact-meta small{font-size:10px;color:#9ca3af;font-weight:900}.unread{min-width:20px;height:20px;border-radius:999px;background:var(--green);color:#fff;font-size:11px;font-weight:950;display:grid;place-items:center}
-    .wa-chat{display:flex;flex-direction:column;min-width:0;background:#efe7dc;background-image:radial-gradient(circle at 20px 20px, rgba(255,255,255,.5) 0 2px, transparent 3px);background-size:54px 54px}.wa-chat-head{display:flex;justify-content:space-between;gap:14px;align-items:center;padding:16px 18px;background:#fff;border-bottom:1px solid var(--line)}.wa-chat-user{display:flex;gap:12px;align-items:center;min-width:0}.wa-chat-user h3{margin:0;font-size:18px;font-weight:950}.wa-chat-user p{margin:3px 0 0;color:var(--muted);font-size:12px;font-weight:800}
-    .wa-messages{flex:1;overflow:auto;padding:20px;display:flex;flex-direction:column;gap:10px}.wa-msg{max-width:min(72%,680px);border-radius:18px;padding:10px 12px;box-shadow:0 2px 10px rgba(0,0,0,.05);font-weight:750;line-height:1.42;white-space:pre-wrap}.wa-msg.customer{align-self:flex-start;background:#fff;border-top-left-radius:5px}.wa-msg.store,.wa-msg.system{align-self:flex-end;background:#d9fdd3;border-top-right-radius:5px}.wa-msg small{display:block;margin-top:5px;text-align:right;color:#6b7280;font-size:10px;font-weight:900}
-    .wa-quick{display:flex;gap:8px;overflow:auto;padding:10px 14px;background:rgba(255,255,255,.82);border-top:1px solid var(--line)}.wa-quick button{white-space:nowrap;border-radius:999px;background:var(--paper);padding:8px 12px;font-size:12px;font-weight:900;color:#555}.wa-input{display:flex;gap:10px;align-items:flex-end;padding:14px;background:#fff;border-top:1px solid var(--line)}.wa-input textarea{min-height:46px;max-height:110px;resize:none;border:0;outline:0;background:var(--paper);border-radius:20px;padding:13px 14px;font-weight:800;flex:1}.wa-input .send{width:48px;height:48px;border-radius:18px;background:var(--blue);color:#fff;font-weight:950}.wa-empty{display:grid;place-items:center;text-align:center;min-height:680px;padding:24px}.wa-empty .wa-avatar{margin:auto;width:88px;height:88px;border-radius:30px;font-size:34px}.wa-empty h3{font-size:26px;margin:16px 0 6px;font-weight:950}
-    @media(max-width:850px){.wa-shell{grid-template-columns:1fr}.wa-list{display:block}.wa-shell.chat-open .wa-list{display:none}.wa-shell:not(.chat-open) .wa-chat{display:none}.wa-msg{max-width:88%}.wa-chat-head .mobile-back{display:inline-flex!important}}
-    @media(max-width:1050px){.app{grid-template-columns:1fr}.sidebar{display:none}.mobile-menu{display:block;position:fixed;left:0;right:0;bottom:0;background:#fff;border-top:1px solid var(--line);z-index:40;padding:7px}.mobile-menu .nav{display:grid;grid-template-columns:repeat(6,1fr);gap:2px}.mobile-menu button{font-size:10px;padding:8px 2px;display:grid;place-items:center;gap:3px}.topbar{height:auto;padding:14px 16px}.content{padding:18px 14px 88px}.grid.cols-4,.grid.cols-3,.grid.cols-2,.split,.charts{grid-template-columns:1fr}.title-row{display:block}.title-row .toolbar{margin-top:14px}.kanban{grid-template-columns:repeat(4,260px)}.form-grid{grid-template-columns:1fr}.logo h1{font-size:16px}}
-    @media print{body{background:#fff}.sidebar,.topbar,.mobile-menu,.no-print{display:none!important}.app{display:block}.content{padding:0}.print-only{display:block}.card,.table-wrap{box-shadow:none;border:1px solid #ddd}.modal{position:static;background:#fff;padding:0}.modal-box{max-height:none;box-shadow:none}}
-  </style>
-</head>
-<body>
-<div id="root"></div>
-<div id="toast" class="toast hidden"></div>
-
-<script>
 const BASE_CONFIG = window.HUSKY_CONFIG || {};
 const APP_CONFIG = {
   supabaseUrl: BASE_CONFIG.supabaseUrl || "",
@@ -68,41 +33,17 @@ const assets = {
   abana: "assets/husky/IMG_6999.PNG",
   prestigio: "assets/husky/IMG_7009.PNG",
 };
-function safeText(v){
-  return String(v ?? "").replace(/[&<>\"']/g, function(m){
-    return ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#039;"})[m] || m;
-  });
-}
-function readStorage(key, fallback){
-  try{
-    const raw = localStorage.getItem(key);
-    if(raw === null || raw === undefined || raw === "undefined" || raw === "") return fallback;
-    return JSON.parse(raw);
-  }catch(error){
-    console.warn("Storage inválido removido:", key, error);
-    try{ localStorage.removeItem(key); }catch(e){}
-    return fallback;
-  }
-}
-function showGestaoFatal(title,error){
-  console.error(title,error);
-  const root = document.getElementById("root");
-  if(!root) return;
-  root.innerHTML = `<main class="login"><section class="login-box"><div class="logo"><div class="logo-mark"><span>🐺</span></div><div><h1>Husky Gestão</h1><p>Recuperação do sistema</p></div></div><h2>${safeText(title || "Erro na gestão")}</h2><p>A tela foi protegida para não ficar branca. Limpe as sessões antigas e tente novamente.</p><div class="toast" style="position:static;background:#fee2e2;color:#991b1b;margin:14px 0;box-shadow:none">${safeText(error && (error.message || error) || "Erro desconhecido")}</div><button class="btn blue" onclick="location.reload()">Recarregar</button><button class="btn outline" style="margin-top:10px;width:100%" onclick="['husky_admin_user','husky_gestao_auth_v1','husky_store_open','husky_sound_on'].forEach(k=>localStorage.removeItem(k));Object.keys(localStorage).filter(k=>k.startsWith('sb-')||k.startsWith('husky_')).forEach(k=>{if(k.includes('auth')||k.includes('admin'))localStorage.removeItem(k)});location.href='gestao.html'">Limpar sessão da gestão</button><button class="btn light" style="margin-top:10px;width:100%" onclick="location.href='limpar-sessoes.html'">Abrir limpeza completa</button></section></main>`;
-}
-window.addEventListener("error", function(e){ showGestaoFatal("Erro na gestão", e.error || e.message); });
-window.addEventListener("unhandledrejection", function(e){ showGestaoFatal("Erro de conexão na gestão", e.reason || e); });
 
 const state = {
-  user: readStorage("husky_admin_user", null),
+  user: JSON.parse(localStorage.getItem("husky_admin_user") || "null"),
   route: "dashboard",
   subroute: "overview",
   selectedOrder: null, selectedChatUser:null, chatChannel:null, ordersChannel:null, productsChannel:null,
   search: "",
   statusFilter: "all",
   periodFilter: "today",
-  storeOpen: readStorage("husky_store_open", true),
-  soundOn: readStorage("husky_sound_on", true),
+  storeOpen: JSON.parse(localStorage.getItem("husky_store_open") || "true"),
+  soundOn: JSON.parse(localStorage.getItem("husky_sound_on") || "true"),
   data: seedData(),
 };
 
@@ -110,68 +51,68 @@ function seedData(){
   const today = new Date();
   const iso = today.toISOString();
   return {
-    products: readStorage("husky_products", null) || [
+    products: JSON.parse(localStorage.getItem("husky_products") || "null") || [
       {id:"p1",name:"Lambe Lambe Brigadeiro",slug:"lambe-lambe-brigadeiro",category:"Bolos de pote",price:18,promo_price:null,cost:6.2,stock:12,min_stock:4,active:true,available:true,visible_on_client:true,featured:true,image_url:assets.lambe,size:"250 ml",weight:"250g a 260g",prep_time:20,tag:"Mais vendido",description:"Bolo de chocolate com brigadeiro cremoso.",details:"Massa de chocolate, brigadeiro cremoso e montagem artesanal.",ingredients:"Chocolate, leite condensado, creme de leite, farinha, ovos.",allergens:"Contém leite, glúten e derivados de soja.",sku:"HUS-LAMBE"},
       {id:"p2",name:"Abana Rabo",slug:"abana-rabo",category:"Bolos de pote",price:18,promo_price:null,cost:6.1,stock:9,min_stock:4,active:true,available:true,visible_on_client:true,featured:true,image_url:assets.abana,size:"250 ml",weight:"250g a 260g",prep_time:20,tag:"Azedinho",description:"Chocolate com creme de maracujá.",details:"Doce e ácido na medida certa.",ingredients:"Chocolate, maracujá, leite condensado, creme de leite.",allergens:"Contém leite, glúten e derivados de soja.",sku:"HUS-ABANA"},
       {id:"p3",name:"Uivo de Prestígio",slug:"uivo-de-prestigio",category:"Bolos de pote",price:18,promo_price:null,cost:6.0,stock:7,min_stock:4,active:true,available:true,visible_on_client:true,featured:false,image_url:assets.prestigio,size:"250 ml",weight:"250g a 260g",prep_time:20,tag:"Clássico",description:"Chocolate com coco.",details:"Camadas de chocolate com creme de coco.",ingredients:"Chocolate, coco, leite condensado, creme de leite.",allergens:"Contém leite, glúten e coco.",sku:"HUS-PREST"},
       {id:"p4",name:"Pata Crocante",slug:"pata-crocante",category:"Bolos de pote",price:18,promo_price:null,cost:6.7,stock:0,min_stock:4,active:true,available:false,visible_on_client:true,featured:false,image_url:assets.menu,size:"250 ml",weight:"250g a 260g",prep_time:20,tag:"Esgotado",description:"Oreo com creme de ninho.",details:"Creme de ninho com Oreo crocante.",ingredients:"Leite ninho, Oreo, leite condensado, creme de leite.",allergens:"Contém leite, glúten e derivados de soja.",sku:"HUS-PATA"},
     ],
-    orders: readStorage("husky_orders", null) || [
+    orders: JSON.parse(localStorage.getItem("husky_orders") || "null") || [
       {id:"o1",order_number:"HUS-1024",created_at:iso,customer_name:"Yasmin",customer_email:"yasmin@email.com",customer_phone:"11999990000",status:"paid",payment_status:"approved",payment_method:"Pix",payment_gateway_id:"MP-99881",fulfillment:"delivery",subtotal:36,delivery_fee:6.99,discount:0,total:42.99,coupon_code:"",address:{street:"Rua das Flores",number:"120",neighborhood:"Centro",city:"Embu das Artes",reference:"Portão azul"},items:[{product_id:"p1",product_name:"Lambe Lambe Brigadeiro",quantity:1,unit_price:18,total:18,observation:"Com colher",addons:["Colher descartável"]},{product_id:"p2",product_name:"Abana Rabo",quantity:1,unit_price:18,total:18,observation:"",addons:[]}],history:[{time:"19:05",text:"Pagamento Pix aprovado"},{time:"19:06",text:"Pedido enviado para gestão"}],channel:"App próprio",attendant:"",producer:"",driver:"",internal_note:"",priority:"normal"},
       {id:"o2",order_number:"HUS-1025",created_at:iso,customer_name:"João",customer_email:"joao@email.com",customer_phone:"11988880000",status:"preparing",payment_status:"approved",payment_method:"Cartão",payment_gateway_id:"CARD-2122",fulfillment:"pickup",subtotal:54,delivery_fee:0,discount:5,total:49,coupon_code:"PRIMEIRACOLHER",address:null,items:[{product_id:"p3",product_name:"Uivo de Prestígio",quantity:3,unit_price:18,total:54,observation:"Retirar às 20h",addons:[]}],history:[{time:"18:41",text:"Pedido aceito"},{time:"18:50",text:"Produção iniciada"}],channel:"App próprio",attendant:"Jhonny",producer:"Cozinha",driver:"",internal_note:"Cliente pediu retirada",priority:"high"},
     ],
-    categories: readStorage("husky_categories", null) || [
+    categories: JSON.parse(localStorage.getItem("husky_categories") || "null") || [
       {id:"c1",name:"Bolos de pote",active:true,sort:1,image:assets.menu,schedule:"Todos os horários"},
       {id:"c2",name:"Combos",active:true,sort:2,image:assets.pedidos,schedule:"Sábados e domingos"},
       {id:"c3",name:"Promoções",active:true,sort:3,image:assets.feedbacks,schedule:"Todos os horários"},
     ],
-    addons: readStorage("husky_addons", null) || [
+    addons: JSON.parse(localStorage.getItem("husky_addons") || "null") || [
       {id:"a1",group:"Embalagem",name:"Sacola kraft",price:2,active:true,required:false,min:0,max:1,stock:80,products:["p1","p2","p3","p4"]},
       {id:"a2",group:"Embalagem",name:"Cartão presente",price:1.5,active:true,required:false,min:0,max:1,stock:40,products:["p1","p2","p3","p4"]},
       {id:"a3",group:"Extras",name:"Mais brigadeiro",price:3,active:true,required:false,min:0,max:2,stock:20,products:["p1"]},
     ],
-    coupons: readStorage("husky_coupons", null) || [
+    coupons: JSON.parse(localStorage.getItem("husky_coupons") || "null") || [
       {id:"cp1",code:"PRIMEIRACOLHER",title:"Primeira colher",type:"value",value:5,min_subtotal:30,min_items:0,active:true,starts_at:"",expires_at:"",max_uses:100,used:3,first_purchase:true,products:[],clients:[]},
       {id:"cp2",code:"HUSKY10",title:"10% OFF",type:"percent",value:10,min_subtotal:50,min_items:0,active:true,starts_at:"",expires_at:"",max_uses:200,used:8,first_purchase:false,products:[],clients:[]},
       {id:"cp3",code:"FRETEGRATIS",title:"Entrega grátis",type:"free_delivery",value:0,min_subtotal:35,min_items:0,active:true,starts_at:"",expires_at:"",max_uses:100,used:11,first_purchase:false,products:[],clients:[]},
     ],
-    customers: readStorage("husky_customers", null) || [
+    customers: JSON.parse(localStorage.getItem("husky_customers") || "null") || [
       {id:"u1",name:"Yasmin",email:"yasmin@email.com",phone:"11999990000",address:"Centro, Embu das Artes",orders:4,total_spent:162,last_order:"Hoje",favorite:"Abana Rabo",status:"active",notes:"Cliente gosta de Abana Rabo e sempre pede sem colher.",birthday:""},
       {id:"u2",name:"João",email:"joao@email.com",phone:"11988880000",address:"Jardim Vista Alegre",orders:2,total_spent:91,last_order:"Hoje",favorite:"Uivo de Prestígio",status:"active",notes:"Prefere retirada.",birthday:""},
     ],
-    inventory: readStorage("husky_inventory", null) || [],
-    reviews: readStorage("husky_reviews", null) || [
+    inventory: JSON.parse(localStorage.getItem("husky_inventory") || "null") || [],
+    reviews: JSON.parse(localStorage.getItem("husky_reviews") || "null") || [
       {id:"r1",order_number:"HUS-1023",customer:"Yasmin",rating:5,comment:"Muito caprichado, amei!",product:"Abana Rabo",date:"Hoje",answered:false,tags:["sabor","embalagem"]},
     ],
-    chats: readStorage("husky_chats", null) || [
+    chats: JSON.parse(localStorage.getItem("husky_chats") || "null") || [
       {id:"m1",order_number:"HUS-1024",customer:"Yasmin",sender:"customer",message:"Oi, qual previsão do pedido?",created_at:iso,read:false},
     ],
-    expenses: readStorage("husky_expenses", null) || [
+    expenses: JSON.parse(localStorage.getItem("husky_expenses") || "null") || [
       {id:"e1",name:"Embalagens 250 ml",category:"Embalagens",value:82.50,date:iso.slice(0,10),payment_method:"Pix",recurring:false,quantity:100,supplier:"Fornecedor local",note:"Compra de potes"},
     ],
-    suppliers: readStorage("husky_suppliers", null) || [
+    suppliers: JSON.parse(localStorage.getItem("husky_suppliers") || "null") || [
       {id:"s1",name:"Fornecedor Embalagens",phone:"11977770000",email:"",product:"Potes 250 ml",last_purchase:"Hoje",avg_value:82.5,active:true,notes:"Entrega rápida"},
     ],
-    deliveries: readStorage("husky_deliveries", null) || [],
-    notifications: readStorage("husky_notifications", null) || [
+    deliveries: JSON.parse(localStorage.getItem("husky_deliveries") || "null") || [],
+    notifications: JSON.parse(localStorage.getItem("husky_notifications") || "null") || [
       {id:"n1",type:"order",title:"Novo pedido pago",text:"Pedido HUS-1024 aguardando aceite",read:false,created_at:iso},
       {id:"n2",type:"stock",title:"Estoque baixo",text:"Pata Crocante está esgotado",read:false,created_at:iso},
     ],
-    users: readStorage("husky_users", null) || [
+    users: JSON.parse(localStorage.getItem("husky_users") || "null") || [
       {id:"adm1",name:"Administrador",email:"admin@husky.com",role:"admin",active:true,last_access:"Hoje",permissions:["all"]},
       {id:"op1",name:"Operador",email:"operador@husky.com",role:"operator",active:true,last_access:"",permissions:["orders","chat","products"]},
     ],
-    settings: readStorage("husky_settings", null) || {store_name:"Husky Confeiteiro",description:"Bolos de pote artesanais feitos em Embu das Artes.",phone:"",whatsapp:APP_CONFIG.whatsappNumber,email:"",cnpj:"",address:"Embu das Artes - SP",delivery_policy:"Entrega manual conforme disponibilidade.",cancel_policy:"Cancelamentos avaliados conforme etapa do pedido.",prep_time:25,min_order:18,delivery_fee:APP_CONFIG.deliveryFee,free_delivery_from:APP_CONFIG.freeDeliveryFrom,colors:{primary:APP_CONFIG.storeName},hours:{saturday:"19h às 23h",sunday:"11h às 21h"},capacity:20,accept_scheduled:true,theme:"light"},
-    audit: readStorage("husky_audit", null) || [],
-    issues: readStorage("husky_issues", null) || [],
-    refunds: readStorage("husky_refunds", null) || [],
-    manualOrders: readStorage("husky_manual_orders", null) || [],
-    productionRuns: readStorage("husky_production_runs", null) || [],
-    banners: readStorage("husky_banners", null) || [
+    settings: JSON.parse(localStorage.getItem("husky_settings") || "null") || {store_name:"Husky Confeiteiro",description:"Bolos de pote artesanais feitos em Embu das Artes.",phone:"",whatsapp:APP_CONFIG.whatsappNumber,email:"",cnpj:"",address:"Embu das Artes - SP",delivery_policy:"Entrega manual conforme disponibilidade.",cancel_policy:"Cancelamentos avaliados conforme etapa do pedido.",prep_time:25,min_order:18,delivery_fee:APP_CONFIG.deliveryFee,free_delivery_from:APP_CONFIG.freeDeliveryFrom,colors:{primary:APP_CONFIG.storeName},hours:{saturday:"19h às 23h",sunday:"11h às 21h"},capacity:20,accept_scheduled:true,theme:"light"},
+    audit: JSON.parse(localStorage.getItem("husky_audit") || "null") || [],
+    issues: JSON.parse(localStorage.getItem("husky_issues") || "null") || [],
+    refunds: JSON.parse(localStorage.getItem("husky_refunds") || "null") || [],
+    manualOrders: JSON.parse(localStorage.getItem("husky_manual_orders") || "null") || [],
+    productionRuns: JSON.parse(localStorage.getItem("husky_production_runs") || "null") || [],
+    banners: JSON.parse(localStorage.getItem("husky_banners") || "null") || [
       {id:"b1",title:"Estamos no app",image:assets.banner,active:true,starts_at:"",ends_at:"",link_type:"coupon",link_value:"PRIMEIRACOLHER",clicks:0,sort:1},
     ],
-    channels: readStorage("husky_channels", null) || ["App próprio","WhatsApp","Instagram","iFood","Presencial","Manual"],
-    loyalty: readStorage("husky_loyalty", null) || {enabled:true,rule:"Compre 9 bolos e ganhe 1",points_per_real:1,reward_threshold:9},
+    channels: JSON.parse(localStorage.getItem("husky_channels") || "null") || ["App próprio","WhatsApp","Instagram","iFood","Presencial","Manual"],
+    loyalty: JSON.parse(localStorage.getItem("husky_loyalty") || "null") || {enabled:true,rule:"Compre 9 bolos e ganhe 1",points_per_real:1,reward_threshold:9},
   };
 }
 
@@ -496,6 +437,3 @@ function beep(){try{const ctx=new (window.AudioContext||window.webkitAudioContex
   if(state.user){ await loadSupabaseData(); setupGestaoRealtime(); render(); }
   else renderLogin();
 })();
-</script>
-</body>
-</html>

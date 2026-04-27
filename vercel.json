@@ -1,0 +1,17 @@
+{
+  "cleanUrls": true,
+  "trailingSlash": false,
+  "rewrites": [
+    { "source": "/gestao", "destination": "/gestao.html" },
+    { "source": "/cliente", "destination": "/index.html" },
+    { "source": "/retorno-pagamento", "destination": "/retorno-pagamento.html" }
+  ],
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        { "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" }
+      ]
+    }
+  ]
+}

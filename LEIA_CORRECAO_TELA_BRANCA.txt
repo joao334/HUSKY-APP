@@ -1,0 +1,18 @@
+CORREÇÃO DA TELA BRANCA AO ATUALIZAR
+
+O que foi corrigido:
+1. A gestão agora lê localStorage com segurança. Se alguma sessão/dado antigo estiver corrompido, o sistema limpa só o item ruim em vez de travar.
+2. Foi adicionada uma tela de recuperação no gestor. Se ocorrer erro, ela mostra o erro e botões para recarregar/limpar sessão em vez de deixar a tela branca.
+3. Foi adicionado vercel.json com atalhos:
+   /gestao -> /gestao.html
+   /cliente -> /index.html
+   /retorno-pagamento -> /retorno-pagamento.html
+4. Cache desativado na Vercel para evitar abrir versão antiga após atualização.
+
+Depois de subir na Vercel:
+1. Acesse https://husky-app.vercel.app/limpar-sessoes.html
+2. Limpe as sessões antigas.
+3. Abra o cliente: https://husky-app.vercel.app/
+4. Abra a gestão: https://husky-app.vercel.app/gestao.html ou /gestao
+
+Se ainda aparecer tela branca, abra o navegador em guia anônima e teste novamente.
