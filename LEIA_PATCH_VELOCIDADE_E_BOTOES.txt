@@ -1,0 +1,22 @@
+CORREÇÕES DESTA VERSÃO
+
+1. Atualização mais rápida entre Gestão e Cliente:
+   - Realtime do Supabase reforçado.
+   - Polling inteligente a cada 1,5s na gestão e 2s no cliente.
+   - Cliente atualiza produtos/cupons automaticamente sem precisar recarregar.
+
+2. Chat mais rápido:
+   - Cliente mostra mensagem imediatamente e salva cache local.
+   - Gestão recebe por Realtime e também por atualização automática.
+   - Mensagens não somem ao trocar de tela.
+
+3. Botões revisados:
+   - Salvar produto, alterar estoque, esgotar/reativar, deletar itens genéricos, horários, entrega e configurações agora salvam no Supabase quando conectado.
+   - Excluir cupom/categoria/banner etc. também tenta excluir no Supabase.
+
+4. Rode no Supabase:
+   PATCH_PERSISTENCIA_TOTAL_HUSKY.sql
+   PATCH_CHAT_CUPONS_TEMPO_REAL.sql
+   PATCH_VELOCIDADE_REALTIME_HUSKY.sql
+
+Depois suba todos os arquivos na Vercel e limpe sessões em /limpar-sessoes.html.

@@ -1,0 +1,27 @@
+CORREÇÃO CHAT + CUPONS + SAIR DO CLIENTE
+
+O que foi corrigido neste pacote:
+1. Chat do cliente agora salva cache local e grava no Supabase com retorno imediato.
+2. Chat da gestão agora carrega conversas por uma função leve, sem depender de recarregar o sistema inteiro.
+3. A gestão passa a atualizar o chat a cada 5 segundos enquanto a tela de chat estiver aberta, além do Realtime.
+4. O cliente atualiza produtos/cupons a cada 7 segundos em segundo plano, além do Realtime.
+5. Cupons alterados no gestor agora são buscados novamente no cliente.
+6. Botão de sair do cliente foi reforçado: limpa sessão Supabase, storage antigo e volta para o app sem usuário.
+7. Incluído patch SQL: PATCH_CHAT_CUPONS_TEMPO_REAL.sql
+
+PASSO A PASSO:
+1. Suba todos os arquivos deste ZIP na Vercel.
+2. No Supabase, rode PATCH_CHAT_CUPONS_TEMPO_REAL.sql.
+3. Acesse /limpar-sessoes.html e limpe as sessões antigas.
+4. Teste:
+   - Cliente envia mensagem no Chat.
+   - Gestor abre Chat/Suporte e clica Atualizar se precisar.
+   - Gestor responde.
+   - Cliente deve receber a resposta.
+   - Edite/crie um cupom no gestor.
+   - Abra a aba Cupons no cliente ou aguarde alguns segundos.
+
+IMPORTANTE:
+Se o chat ainda não aparecer, confira no Supabase > Table Editor > chat_messages.
+Se a mensagem está na tabela e não aparece no gestor, o problema é permissão/RLS ou Realtime.
+Se a mensagem nem entra na tabela, o problema é RLS do cliente ou login do cliente.

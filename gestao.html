@@ -73,7 +73,7 @@ const state = {
   user: JSON.parse(localStorage.getItem("husky_admin_user") || "null"),
   route: "dashboard",
   subroute: "overview",
-  selectedOrder: null, selectedChatUser:null, chatChannel:null, ordersChannel:null, productsChannel:null,
+  selectedOrder: null, selectedChatUser:null, chatChannel:null, ordersChannel:null, productsChannel:null, refreshTimer:null,
   search: "",
   statusFilter: "all",
   periodFilter: "today",
@@ -202,19 +202,63 @@ async function loadSupabaseData(){
     saveAll();
   }catch(e){console.warn('Supabase gestão:',e.message);toast('Alguns dados não carregaram do Supabase: '+e.message)}
 }
+
+async function loadSupabaseChatData(){
+  if(!HAS_SUPABASE || !state.user) return;
+  try{
+    const [chatsData, profilesData, ordersData] = await Promise.all([
+      safeTable('chat_messages', db.from('chat_messages').select('id,user_id,order_id,sender,message,created_at,read_at').order('created_at',{ascending:false}).limit(500)),
+      safeTable('profiles', db.from('profiles').select('id,name,email,phone,address')),
+      safeTable('customer_orders', db.from('customer_orders').select('id,order_number,user_id,customer_name,customer_email,customer_phone').order('created_at',{ascending:false}).limit(200))
+    ]);
+    const profileById = new Map((profilesData||[]).map(p=>[String(p.id),p]));
+    const orderById = new Map((ordersData||[]).map(o=>[String(o.id),o]));
+    state.data.chats=(chatsData||[]).map(m=>{
+      const prof=profileById.get(String(m.user_id))||{};
+      const ord=m.order_id?orderById.get(String(m.order_id)):null;
+      return {
+        id:m.id,user_id:m.user_id,order_id:m.order_id,order_number:ord?.order_number||'',
+        customer:prof.name||ord?.customer_name||prof.email||ord?.customer_email||('Cliente '+String(m.user_id||'').slice(0,6)),
+        phone:prof.phone||ord?.customer_phone||'',sender:m.sender,message:m.message,created_at:m.created_at,read:!!m.read_at
+      };
+    });
+    saveAll();
+  }catch(e){console.warn('Chat gestão:',e.message);toast('Não foi possível atualizar o chat: '+e.message)}
+}
+
+async function loadSupabaseCouponsOnly(){
+  if(!HAS_SUPABASE || !state.user) return;
+  const couponsData=await safeTable('coupons', db.from('coupons').select('*').order('created_at',{ascending:false}));
+  state.data.coupons=(couponsData||[]).map(c=>({id:c.id,code:c.code,title:c.title,type:c.discount_type,value:Number(c.discount_value||0),min_subtotal:Number(c.min_subtotal||0),min_items:Number(c.min_items||0),active:c.active!==false,starts_at:c.starts_at||'',expires_at:c.expires_at||'',max_uses:c.max_uses||0,used:c.used_count||0,first_purchase:c.first_purchase_only||false,products:[],clients:[]}));
+  saveAll();
+}
+
 function setupGestaoRealtime(){
   if(!HAS_SUPABASE||!state.user) return;
   [state.chatChannel,state.ordersChannel,state.productsChannel,state.catalogChannel].filter(Boolean).forEach(ch=>db.removeChannel(ch));
-  state.chatChannel=db.channel('gestao-chat').on('postgres_changes',{event:'*',schema:'public',table:'chat_messages'},async()=>{await loadSupabaseData();render();}).subscribe();
-  state.ordersChannel=db.channel('gestao-orders').on('postgres_changes',{event:'*',schema:'public',table:'customer_orders'},async()=>{await loadSupabaseData();render();}).subscribe();
-  state.productsChannel=db.channel('gestao-products').on('postgres_changes',{event:'*',schema:'public',table:'products'},async()=>{await loadSupabaseData();render();}).subscribe();
-  state.catalogChannel=db.channel('gestao-catalogo')
-    .on('postgres_changes',{event:'*',schema:'public',table:'coupons'},async()=>{await loadSupabaseData();render();})
+  state.chatChannel=db.channel('gestao-chat-v2')
+    .on('postgres_changes',{event:'*',schema:'public',table:'chat_messages'},async()=>{await loadSupabaseChatData();if(state.route==='chat')render();})
+    .subscribe();
+  state.ordersChannel=db.channel('gestao-orders-v2')
+    .on('postgres_changes',{event:'*',schema:'public',table:'customer_orders'},async()=>{await loadSupabaseData();render();})
+    .subscribe();
+  state.productsChannel=db.channel('gestao-products-v2')
+    .on('postgres_changes',{event:'*',schema:'public',table:'products'},async()=>{await loadSupabaseData();render();})
+    .subscribe();
+  state.catalogChannel=db.channel('gestao-catalogo-v2')
+    .on('postgres_changes',{event:'*',schema:'public',table:'coupons'},async()=>{await loadSupabaseCouponsOnly();if(state.route==='coupons')render();})
     .on('postgres_changes',{event:'*',schema:'public',table:'product_categories'},async()=>{await loadSupabaseData();render();})
     .on('postgres_changes',{event:'*',schema:'public',table:'product_addons'},async()=>{await loadSupabaseData();render();})
     .on('postgres_changes',{event:'*',schema:'public',table:'banners'},async()=>{await loadSupabaseData();render();})
     .on('postgres_changes',{event:'*',schema:'public',table:'store_settings'},async()=>{await loadSupabaseData();render();})
     .subscribe();
+  if(state.refreshTimer) clearInterval(state.refreshTimer);
+  state.refreshTimer=setInterval(async()=>{
+    try{
+      if(state.route==='chat') { await loadSupabaseChatData(); render(); }
+      if(state.route==='coupons') { await loadSupabaseCouponsOnly(); render(); }
+    }catch(e){console.warn('refresh gestão',e.message)}
+  },1500);
 }
 async function upsertSupabase(table,payload,options={}){
   if(!HAS_SUPABASE||!state.user) return true;
@@ -241,7 +285,7 @@ window.addEventListener('error',e=>showFatalError('Erro na gestão',e.error||e.m
 window.addEventListener('unhandledrejection',e=>showFatalError('Erro de conexão na gestão',e.reason||e));
 function toast(msg){const el=document.getElementById("toast");el.textContent=msg;el.classList.remove("hidden");setTimeout(()=>el.classList.add("hidden"),2600)}
 function audit(action, details){state.data.audit.unshift({id:crypto.randomUUID?.()||Date.now(),user:state.user?.email||"local",action,details,created_at:new Date().toISOString()});saveAll()}
-function setRoute(route, sub="overview"){state.route=route;state.subroute=sub;state.selectedOrder=null;render()}
+function setRoute(route, sub="overview"){state.route=route;state.subroute=sub;state.selectedOrder=null;render(); if(route==="chat"){setTimeout(()=>manualChatRefresh(false),50)} if(["coupons","products","store"].includes(route)){setTimeout(()=>loadSupabaseData().then(()=>render()),80)} }
 function statusLabel(s){return ({paid:"Aguardando aceite",accepted:"Aceito",preparing:"Em produção",packing:"Embalando",ready:"Pronto",delivery:"Em entrega",done:"Entregue",cancelled:"Cancelado",refunded:"Reembolsado",problem:"Problema"}[s]||s)}
 function statusClass(s){if(["paid","accepted","ready","done"].includes(s))return "paid";if(["preparing","packing"].includes(s))return "production";if(["delivery"].includes(s))return "delivery";if(["cancelled","refunded","problem"].includes(s))return "cancelled";return "pending"}
 function nextStatus(s, fulfillment){const flow=fulfillment==="pickup"?["paid","accepted","preparing","packing","ready","done"]:["paid","accepted","preparing","packing","ready","delivery","done"];return flow[Math.min(flow.indexOf(s)+1,flow.length-1)]||s}
@@ -388,17 +432,24 @@ function chatMessageBubble(m){const cls=m.sender==='customer'?'customer':(m.send
 function selectChatThread(key){state.selectedChatUser=key;markThreadRead(key,false);render();setTimeout(()=>{const box=document.getElementById('waMessages');if(box)box.scrollTop=box.scrollHeight;},50)}
 async function sendGestaoChat(){
   const thread=selectedThread();const input=document.getElementById('chatReply');const msg=(input?.value||'').trim();if(!thread||!msg)return;
-  const local={id:String(Date.now()),user_id:thread.user_id,order_id:thread.messages[thread.messages.length-1]?.order_id||null,order_number:thread.order_number,customer:thread.customer,sender:'store',message:msg,created_at:new Date().toISOString(),read:true};
+  if(!thread.user_id){toast('Conversa sem user_id. Não foi possível enviar ao cliente.');return;}
+  const local={id:'tmp-'+Date.now(),user_id:thread.user_id,order_id:thread.messages[thread.messages.length-1]?.order_id||null,order_number:thread.order_number,customer:thread.customer,sender:'store',message:msg,created_at:new Date().toISOString(),read:true};
   state.data.chats.push(local); if(input)input.value=''; saveAll(); render();
   if(HAS_SUPABASE){
-    if(!thread.user_id){toast('Conversa sem user_id. Não foi possível enviar ao cliente no Supabase.');return;}
-    const {error}=await db.from('chat_messages').insert({user_id:thread.user_id,order_id:local.order_id,sender:'store',message:msg});
+    const {data,error}=await db.from('chat_messages')
+      .insert({user_id:thread.user_id,order_id:local.order_id,sender:'store',message:msg})
+      .select('id,user_id,order_id,sender,message,created_at,read_at')
+      .single();
     if(error){toast('Erro ao enviar no Supabase: '+error.message);return;}
-    await loadSupabaseData(); render();
+    if(data){
+      state.data.chats=state.data.chats.map(m=>m.id===local.id?{...local,id:data.id,created_at:data.created_at}:m);
+      saveAll();
+    }
+    setTimeout(async()=>{await loadSupabaseChatData();render();},300);
   }
 }
 function markThreadRead(key,rerender=true){const t=chatThreads().find(x=>String(x.key)===String(key));if(!t)return;t.messages.filter(m=>m.sender==='customer'&&!m.read).forEach(m=>{m.read=true;if(HAS_SUPABASE&&m.id)updateSupabase('chat_messages',{read_at:new Date().toISOString()},m.id)});saveAll();if(rerender)render()}
-async function manualChatRefresh(){if(HAS_SUPABASE)await loadSupabaseData();render();toast('Chat atualizado')}
+async function manualChatRefresh(showToast=true){if(HAS_SUPABASE)await loadSupabaseChatData();render();if(showToast)toast('Chat atualizado')}
 function openChatWhatsApp(){const t=selectedThread();if(!t)return;const cust=state.data.customers.find(c=>c.id===t.user_id||c.name===t.customer);const phone=String(cust?.phone||t.phone||'').replace(/\D/g,'');if(!phone){toast('Cliente sem telefone cadastrado.');return;}window.open(`https://wa.me/55${phone}?text=${encodeURIComponent('Olá! Aqui é da Husky Confeiteiro 💙')}`,'_blank')}
 function initials(name){return String(name||'C').split(/\s+/).filter(Boolean).slice(0,2).map(x=>x[0]).join('').toUpperCase()||'C'}
 function escapeAttr(str){return String(str??'').replace(/&/g,'&amp;').replace(/'/g,'&#39;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
@@ -475,6 +526,118 @@ function saveSettings(){['store_name','description','phone','whatsapp','email','
 function exportPage(){return `${title('Exportação','Baixe CSV de pedidos, clientes, vendas, estoque, financeiro e avaliações.')}<div class="grid cols-3">${['orders','products','customers','coupons','reviews','expenses','audit'].map(k=>`<button class="btn light" onclick="exportCSV('${k}')">Exportar ${k}</button>`).join('')}</div>`}
 function exportCSV(key){const data=state.data[key]||[];if(!data.length){toast('Nada para exportar');return}const rows=[Object.keys(data[0]).join(',')].concat(data.map(o=>Object.values(o).map(v=>`"${String(typeof v==='object'?JSON.stringify(v):v).replace(/"/g,'""')}"`).join(',')));const blob=new Blob([rows.join('\n')],{type:'text/csv'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`husky_${key}.csv`;a.click();URL.revokeObjectURL(a.href)}
 function beep(){try{const ctx=new (window.AudioContext||window.webkitAudioContext)();const o=ctx.createOscillator();const g=ctx.createGain();o.connect(g);g.connect(ctx.destination);o.frequency.value=880;g.gain.value=.05;o.start();setTimeout(()=>{o.stop();ctx.close()},180)}catch(e){}}
+
+
+/* ===== PATCH GESTÃO VELOCIDADE + BOTÕES + SINCRONIA ===== */
+let __gestaoSyncRunning=false;
+let __gestaoChatSnap='';
+function mapCouponFromDb(c){return {id:c.id,code:c.code,title:c.title,type:c.discount_type||'value',value:Number(c.discount_value||0),min_subtotal:Number(c.min_subtotal||0),min_items:Number(c.min_items||0),active:c.active!==false,starts_at:c.starts_at||'',expires_at:c.expires_at||'',max_uses:c.max_uses||0,used:c.used_count||0,first_purchase:c.first_purchase_only||false,description:c.description||'',products:[],clients:[]}}
+async function loadSupabaseCouponsOnly(){
+  if(!HAS_SUPABASE || !state.user) return;
+  const couponsData=await safeTable('coupons', db.from('coupons').select('*').order('updated_at',{ascending:false,nullsFirst:false}).order('created_at',{ascending:false}));
+  state.data.coupons=(couponsData||[]).map(mapCouponFromDb);
+  saveAll();
+}
+async function loadSupabaseChatData(){
+  if(!HAS_SUPABASE || !state.user) return;
+  try{
+    const [chatsData, profilesData, ordersData] = await Promise.all([
+      safeTable('chat_messages', db.from('chat_messages').select('id,user_id,order_id,sender,message,created_at,read_at').order('created_at',{ascending:false}).limit(700)),
+      safeTable('profiles', db.from('profiles').select('id,name,email,phone,address')),
+      safeTable('customer_orders', db.from('customer_orders').select('id,order_number,user_id,customer_name,customer_email,customer_phone').order('created_at',{ascending:false}).limit(300))
+    ]);
+    const snap=JSON.stringify((chatsData||[]).map(m=>[m.id,m.sender,m.message,m.read_at]));
+    if(snap===__gestaoChatSnap && state.data.chats.length) return;
+    __gestaoChatSnap=snap;
+    const profileById = new Map((profilesData||[]).map(p=>[String(p.id),p]));
+    const orderById = new Map((ordersData||[]).map(o=>[String(o.id),o]));
+    state.data.chats=(chatsData||[]).map(m=>{
+      const prof=profileById.get(String(m.user_id))||{};
+      const ord=m.order_id?orderById.get(String(m.order_id)):null;
+      return {id:m.id,user_id:m.user_id,order_id:m.order_id,order_number:ord?.order_number||'',customer:prof.name||ord?.customer_name||prof.email||ord?.customer_email||('Cliente '+String(m.user_id||'').slice(0,6)),phone:prof.phone||ord?.customer_phone||'',sender:m.sender,message:m.message,created_at:m.created_at,read:!!m.read_at};
+    });
+    saveAll();
+  }catch(e){console.warn('Chat gestão:',e.message);}
+}
+function setupGestaoRealtime(){
+  if(!HAS_SUPABASE||!state.user) return;
+  [state.chatChannel,state.ordersChannel,state.productsChannel,state.catalogChannel].filter(Boolean).forEach(ch=>{try{db.removeChannel(ch)}catch(e){}});
+  state.chatChannel=db.channel('gestao-chat-fast')
+    .on('postgres_changes',{event:'*',schema:'public',table:'chat_messages'},async()=>{await loadSupabaseChatData();if(state.route==='chat')render();})
+    .subscribe(status=>console.log('gestão chat realtime',status));
+  state.ordersChannel=db.channel('gestao-orders-fast')
+    .on('postgres_changes',{event:'*',schema:'public',table:'customer_orders'},async()=>{await loadSupabaseData();render();})
+    .subscribe();
+  state.productsChannel=db.channel('gestao-products-fast')
+    .on('postgres_changes',{event:'*',schema:'public',table:'products'},async()=>{await loadSupabaseData();render();})
+    .subscribe();
+  state.catalogChannel=db.channel('gestao-catalog-fast')
+    .on('postgres_changes',{event:'*',schema:'public',table:'coupons'},async()=>{await loadSupabaseCouponsOnly();render();})
+    .on('postgres_changes',{event:'*',schema:'public',table:'product_categories'},async()=>{await loadSupabaseData();render();})
+    .on('postgres_changes',{event:'*',schema:'public',table:'product_addons'},async()=>{await loadSupabaseData();render();})
+    .on('postgres_changes',{event:'*',schema:'public',table:'banners'},async()=>{await loadSupabaseData();render();})
+    .on('postgres_changes',{event:'*',schema:'public',table:'store_settings'},async()=>{await loadSupabaseData();render();})
+    .subscribe();
+  if(state.refreshTimer) clearInterval(state.refreshTimer);
+  state.refreshTimer=setInterval(async()=>{
+    if(__gestaoSyncRunning) return;
+    __gestaoSyncRunning=true;
+    try{
+      if(state.route==='chat') { await loadSupabaseChatData(); render(); }
+      else if(state.route==='coupons') { await loadSupabaseCouponsOnly(); render(); }
+      else if(['products','dashboard','orders','store','banners','categories','addons'].includes(state.route)) { await loadSupabaseData(); render(); }
+    }catch(e){console.warn('refresh gestão rápido',e.message)}
+    finally{__gestaoSyncRunning=false;}
+  },1500);
+}
+async function genericDelete(key,id){
+  if(!confirm('Excluir item?')) return;
+  const tableMap={categories:'product_categories',addons:'product_addons',coupons:'coupons',expenses:'expenses',suppliers:'suppliers',banners:'banners',issues:'internal_tickets',refunds:'refunds'};
+  const table=tableMap[key];
+  const item=(state.data[key]||[]).find(x=>String(x.id)===String(id));
+  state.data[key]=state.data[key].filter(x=>String(x.id)!==String(id));
+  audit(key+'_delete',id); saveAll(); render();
+  if(HAS_SUPABASE && table && item && isUuid(item.id)){
+    const {error}=await db.from(table).delete().eq('id',item.id);
+    if(error) toast('Erro ao excluir no Supabase: '+error.message);
+  }
+}
+async function saveProduct(id,isNew){
+  const p=isNew?{id:(isUuid(id)?id:newId())}:state.data.products.find(x=>x.id===id);
+  ['name','category','price','cost','stock','min_stock','image_url','tag','sku','description','details','ingredients','allergens'].forEach(k=>p[k]=document.getElementById('pf_'+k)?.value||'');
+  ['price','cost','stock','min_stock'].forEach(k=>p[k]=Number(p[k]||0));
+  p.available=document.getElementById('pf_available').checked;
+  p.visible_on_client=document.getElementById('pf_visible').checked;
+  p.featured=document.getElementById('pf_featured').checked;
+  if(isNew) state.data.products.unshift(p);
+  audit('product_save',p.name); saveAll(); render();
+  const slug=String(p.slug||p.name).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
+  await upsertSupabase('products',{id:p.id,name:p.name,slug,category:p.category,description:p.description,details:p.details,ingredients:p.ingredients,allergens:p.allergens,image_url:p.image_url,price:p.price,cost_estimate:p.cost,stock:p.stock,min_stock:p.min_stock,tag:p.tag,sku:p.sku,active:true,available:p.available,visible_on_client:p.visible_on_client,featured:p.featured,updated_at:new Date().toISOString()});
+  await loadSupabaseData(); render(); toast('Produto salvo e enviado ao cliente.');
+}
+async function toggleProduct(id){
+  const p=state.data.products.find(x=>String(x.id)===String(id)); if(!p) return;
+  p.available=!p.available; if(p.available&&Number(p.stock||0)===0)p.stock=1;
+  audit('product_toggle',p.name+': '+p.available); saveAll(); render();
+  await updateSupabase('products',{available:p.available,stock:p.stock,updated_at:new Date().toISOString()},p.id);
+}
+async function adjustStock(id){
+  const p=state.data.products.find(x=>String(x.id)===String(id)); if(!p){toast('Produto não encontrado.');return;}
+  const q=Number(prompt('Novo estoque para '+p.name+':',p.stock));
+  if(Number.isFinite(q)){p.stock=q;p.available=q>0;state.data.notifications.unshift({id:Date.now(),type:'stock',title:'Estoque alterado',text:p.name+': '+q,read:false,created_at:new Date().toISOString()});audit('stock_adjust',p.name+': '+q);saveAll();render();await updateSupabase('products',{stock:p.stock,available:p.available,updated_at:new Date().toISOString()},p.id)}
+}
+function syncClient(){loadSupabaseData().then(()=>{render();toast('Cliente sincronizado. Alterações publicadas no Supabase.');});}
+async function saveHours(){state.data.settings.hours.saturday=document.getElementById('hSat').value;state.data.settings.hours.sunday=document.getElementById('hSun').value;state.data.settings.capacity=Number(document.getElementById('capacity').value);saveAll();await saveStoreSettingsFast();toast('Horários salvos e enviados ao cliente')}
+async function saveDeliverySettings(){state.data.settings.delivery_fee=Number(document.getElementById('deliveryFee').value);state.data.settings.free_delivery_from=Number(document.getElementById('freeFrom').value);state.data.settings.delivery_area=document.getElementById('deliveryArea').value;saveAll();await saveStoreSettingsFast();toast('Entrega salva e enviada ao cliente')}
+async function pauseStore(){state.storeOpen=false;state.data.settings.pause_reason=document.getElementById('pauseReason').value;saveAll();await saveStoreSettingsFast();render()}
+async function toggleStore(){state.storeOpen=!state.storeOpen;state.data.notifications.unshift({id:Date.now(),type:'store',title:state.storeOpen?'Loja aberta':'Loja fechada',text:'Status alterado pela gestão',read:false,created_at:new Date().toISOString()});audit('store_status',state.storeOpen?'Aberta':'Fechada');saveAll();await saveStoreSettingsFast();render()}
+async function saveStoreSettingsFast(){
+  if(!HAS_SUPABASE) return;
+  await upsertSupabase('store_settings',{key:'store',value:{name:state.data.settings.store_name,description:state.data.settings.description,phone:state.data.settings.phone,whatsapp:state.data.settings.whatsapp,email:state.data.settings.email,cnpj:state.data.settings.cnpj,address:state.data.settings.address,open:state.storeOpen,paused:!state.storeOpen,pause_reason:state.data.settings.pause_reason||'',delivery_fee:state.data.settings.delivery_fee,free_delivery_from:state.data.settings.free_delivery_from,minimum_order:state.data.settings.min_order,hours:state.data.settings.hours,capacity:state.data.settings.capacity,updated_at:new Date().toISOString()}});
+}
+async function saveSettings(){['store_name','description','phone','whatsapp','email','cnpj','address'].forEach(k=>state.data.settings[k]=document.getElementById('set_'+k).value);saveAll();await saveStoreSettingsFast();toast('Configurações salvas e enviadas ao cliente')}
+async function savePolicies(){state.data.settings.delivery_policy=document.getElementById('set_delivery_policy').value;state.data.settings.cancel_policy=document.getElementById('set_cancel_policy').value;saveAll();await saveStoreSettingsFast();toast('Políticas salvas')}
+/* ===== FIM PATCH GESTÃO ===== */
 
 (async function bootGestao(){
   // Segurança: quando o Supabase está configurado, a gestão NUNCA confia só no localStorage.
