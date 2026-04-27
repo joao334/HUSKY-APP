@@ -1,0 +1,30 @@
+CORREÇÃO HUSKY - REFRESH / TELA BRANCA / CUPONS
+
+O que foi corrigido nesta versão:
+
+1. App do cliente
+- Corrigido erro que deixava a tela branca ao atualizar a página.
+- Corrigido trecho JavaScript com quebras de linha inválidas.
+- Cliente agora escuta mudanças em tempo real das tabelas products, coupons e store_settings.
+- Quando o gestor altera cupom/produto, o cliente consegue atualizar automaticamente quando estiver aberto.
+
+2. App da gestão
+- Correção para salvar cupons no Supabase, e não apenas no localStorage.
+- Correção de ID inválido ao criar cupom novo.
+- Cupons usam upsert por code, evitando erro de UUID.
+- Gestão agora escuta mudanças de products, coupons, product_categories, product_addons, banners e store_settings.
+
+3. Banco Supabase
+- Rode o arquivo PATCH_PERSISTENCIA_TOTAL_HUSKY.sql no SQL Editor.
+- Ele garante tabelas, colunas e permissões necessárias.
+
+PASSO A PASSO:
+1. Suba todos os arquivos deste ZIP na Vercel.
+2. No Supabase, rode PATCH_PERSISTENCIA_TOTAL_HUSKY.sql.
+3. Acesse https://husky-app.vercel.app/limpar-sessoes.html e limpe as sessões antigas.
+4. Abra o cliente em guia anônima e atualize a página.
+5. Abra o gestor, crie/edite um cupom e confirme no Supabase > Table Editor > coupons.
+6. Volte no cliente e veja a aba Cupons ou aplique o cupom na sacola.
+
+IMPORTANTE:
+Se o cupom não aparecer no cliente, confira se active = true na tabela coupons.

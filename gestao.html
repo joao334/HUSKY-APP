@@ -68,41 +68,17 @@ const assets = {
   abana: "assets/husky/IMG_6999.PNG",
   prestigio: "assets/husky/IMG_7009.PNG",
 };
-function safeText(v){
-  return String(v ?? "").replace(/[&<>\"']/g, function(m){
-    return ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#039;"})[m] || m;
-  });
-}
-function readStorage(key, fallback){
-  try{
-    const raw = localStorage.getItem(key);
-    if(raw === null || raw === undefined || raw === "undefined" || raw === "") return fallback;
-    return JSON.parse(raw);
-  }catch(error){
-    console.warn("Storage inválido removido:", key, error);
-    try{ localStorage.removeItem(key); }catch(e){}
-    return fallback;
-  }
-}
-function showGestaoFatal(title,error){
-  console.error(title,error);
-  const root = document.getElementById("root");
-  if(!root) return;
-  root.innerHTML = `<main class="login"><section class="login-box"><div class="logo"><div class="logo-mark"><span>🐺</span></div><div><h1>Husky Gestão</h1><p>Recuperação do sistema</p></div></div><h2>${safeText(title || "Erro na gestão")}</h2><p>A tela foi protegida para não ficar branca. Limpe as sessões antigas e tente novamente.</p><div class="toast" style="position:static;background:#fee2e2;color:#991b1b;margin:14px 0;box-shadow:none">${safeText(error && (error.message || error) || "Erro desconhecido")}</div><button class="btn blue" onclick="location.reload()">Recarregar</button><button class="btn outline" style="margin-top:10px;width:100%" onclick="['husky_admin_user','husky_gestao_auth_v1','husky_store_open','husky_sound_on'].forEach(k=>localStorage.removeItem(k));Object.keys(localStorage).filter(k=>k.startsWith('sb-')||k.startsWith('husky_')).forEach(k=>{if(k.includes('auth')||k.includes('admin'))localStorage.removeItem(k)});location.href='gestao.html'">Limpar sessão da gestão</button><button class="btn light" style="margin-top:10px;width:100%" onclick="location.href='limpar-sessoes.html'">Abrir limpeza completa</button></section></main>`;
-}
-window.addEventListener("error", function(e){ showGestaoFatal("Erro na gestão", e.error || e.message); });
-window.addEventListener("unhandledrejection", function(e){ showGestaoFatal("Erro de conexão na gestão", e.reason || e); });
 
 const state = {
-  user: readStorage("husky_admin_user", null),
+  user: JSON.parse(localStorage.getItem("husky_admin_user") || "null"),
   route: "dashboard",
   subroute: "overview",
   selectedOrder: null, selectedChatUser:null, chatChannel:null, ordersChannel:null, productsChannel:null,
   search: "",
   statusFilter: "all",
   periodFilter: "today",
-  storeOpen: readStorage("husky_store_open", true),
-  soundOn: readStorage("husky_sound_on", true),
+  storeOpen: JSON.parse(localStorage.getItem("husky_store_open") || "true"),
+  soundOn: JSON.parse(localStorage.getItem("husky_sound_on") || "true"),
   data: seedData(),
 };
 
@@ -110,68 +86,68 @@ function seedData(){
   const today = new Date();
   const iso = today.toISOString();
   return {
-    products: readStorage("husky_products", null) || [
+    products: JSON.parse(localStorage.getItem("husky_products") || "null") || [
       {id:"p1",name:"Lambe Lambe Brigadeiro",slug:"lambe-lambe-brigadeiro",category:"Bolos de pote",price:18,promo_price:null,cost:6.2,stock:12,min_stock:4,active:true,available:true,visible_on_client:true,featured:true,image_url:assets.lambe,size:"250 ml",weight:"250g a 260g",prep_time:20,tag:"Mais vendido",description:"Bolo de chocolate com brigadeiro cremoso.",details:"Massa de chocolate, brigadeiro cremoso e montagem artesanal.",ingredients:"Chocolate, leite condensado, creme de leite, farinha, ovos.",allergens:"Contém leite, glúten e derivados de soja.",sku:"HUS-LAMBE"},
       {id:"p2",name:"Abana Rabo",slug:"abana-rabo",category:"Bolos de pote",price:18,promo_price:null,cost:6.1,stock:9,min_stock:4,active:true,available:true,visible_on_client:true,featured:true,image_url:assets.abana,size:"250 ml",weight:"250g a 260g",prep_time:20,tag:"Azedinho",description:"Chocolate com creme de maracujá.",details:"Doce e ácido na medida certa.",ingredients:"Chocolate, maracujá, leite condensado, creme de leite.",allergens:"Contém leite, glúten e derivados de soja.",sku:"HUS-ABANA"},
       {id:"p3",name:"Uivo de Prestígio",slug:"uivo-de-prestigio",category:"Bolos de pote",price:18,promo_price:null,cost:6.0,stock:7,min_stock:4,active:true,available:true,visible_on_client:true,featured:false,image_url:assets.prestigio,size:"250 ml",weight:"250g a 260g",prep_time:20,tag:"Clássico",description:"Chocolate com coco.",details:"Camadas de chocolate com creme de coco.",ingredients:"Chocolate, coco, leite condensado, creme de leite.",allergens:"Contém leite, glúten e coco.",sku:"HUS-PREST"},
       {id:"p4",name:"Pata Crocante",slug:"pata-crocante",category:"Bolos de pote",price:18,promo_price:null,cost:6.7,stock:0,min_stock:4,active:true,available:false,visible_on_client:true,featured:false,image_url:assets.menu,size:"250 ml",weight:"250g a 260g",prep_time:20,tag:"Esgotado",description:"Oreo com creme de ninho.",details:"Creme de ninho com Oreo crocante.",ingredients:"Leite ninho, Oreo, leite condensado, creme de leite.",allergens:"Contém leite, glúten e derivados de soja.",sku:"HUS-PATA"},
     ],
-    orders: readStorage("husky_orders", null) || [
+    orders: JSON.parse(localStorage.getItem("husky_orders") || "null") || [
       {id:"o1",order_number:"HUS-1024",created_at:iso,customer_name:"Yasmin",customer_email:"yasmin@email.com",customer_phone:"11999990000",status:"paid",payment_status:"approved",payment_method:"Pix",payment_gateway_id:"MP-99881",fulfillment:"delivery",subtotal:36,delivery_fee:6.99,discount:0,total:42.99,coupon_code:"",address:{street:"Rua das Flores",number:"120",neighborhood:"Centro",city:"Embu das Artes",reference:"Portão azul"},items:[{product_id:"p1",product_name:"Lambe Lambe Brigadeiro",quantity:1,unit_price:18,total:18,observation:"Com colher",addons:["Colher descartável"]},{product_id:"p2",product_name:"Abana Rabo",quantity:1,unit_price:18,total:18,observation:"",addons:[]}],history:[{time:"19:05",text:"Pagamento Pix aprovado"},{time:"19:06",text:"Pedido enviado para gestão"}],channel:"App próprio",attendant:"",producer:"",driver:"",internal_note:"",priority:"normal"},
       {id:"o2",order_number:"HUS-1025",created_at:iso,customer_name:"João",customer_email:"joao@email.com",customer_phone:"11988880000",status:"preparing",payment_status:"approved",payment_method:"Cartão",payment_gateway_id:"CARD-2122",fulfillment:"pickup",subtotal:54,delivery_fee:0,discount:5,total:49,coupon_code:"PRIMEIRACOLHER",address:null,items:[{product_id:"p3",product_name:"Uivo de Prestígio",quantity:3,unit_price:18,total:54,observation:"Retirar às 20h",addons:[]}],history:[{time:"18:41",text:"Pedido aceito"},{time:"18:50",text:"Produção iniciada"}],channel:"App próprio",attendant:"Jhonny",producer:"Cozinha",driver:"",internal_note:"Cliente pediu retirada",priority:"high"},
     ],
-    categories: readStorage("husky_categories", null) || [
+    categories: JSON.parse(localStorage.getItem("husky_categories") || "null") || [
       {id:"c1",name:"Bolos de pote",active:true,sort:1,image:assets.menu,schedule:"Todos os horários"},
       {id:"c2",name:"Combos",active:true,sort:2,image:assets.pedidos,schedule:"Sábados e domingos"},
       {id:"c3",name:"Promoções",active:true,sort:3,image:assets.feedbacks,schedule:"Todos os horários"},
     ],
-    addons: readStorage("husky_addons", null) || [
+    addons: JSON.parse(localStorage.getItem("husky_addons") || "null") || [
       {id:"a1",group:"Embalagem",name:"Sacola kraft",price:2,active:true,required:false,min:0,max:1,stock:80,products:["p1","p2","p3","p4"]},
       {id:"a2",group:"Embalagem",name:"Cartão presente",price:1.5,active:true,required:false,min:0,max:1,stock:40,products:["p1","p2","p3","p4"]},
       {id:"a3",group:"Extras",name:"Mais brigadeiro",price:3,active:true,required:false,min:0,max:2,stock:20,products:["p1"]},
     ],
-    coupons: readStorage("husky_coupons", null) || [
+    coupons: JSON.parse(localStorage.getItem("husky_coupons") || "null") || [
       {id:"cp1",code:"PRIMEIRACOLHER",title:"Primeira colher",type:"value",value:5,min_subtotal:30,min_items:0,active:true,starts_at:"",expires_at:"",max_uses:100,used:3,first_purchase:true,products:[],clients:[]},
       {id:"cp2",code:"HUSKY10",title:"10% OFF",type:"percent",value:10,min_subtotal:50,min_items:0,active:true,starts_at:"",expires_at:"",max_uses:200,used:8,first_purchase:false,products:[],clients:[]},
       {id:"cp3",code:"FRETEGRATIS",title:"Entrega grátis",type:"free_delivery",value:0,min_subtotal:35,min_items:0,active:true,starts_at:"",expires_at:"",max_uses:100,used:11,first_purchase:false,products:[],clients:[]},
     ],
-    customers: readStorage("husky_customers", null) || [
+    customers: JSON.parse(localStorage.getItem("husky_customers") || "null") || [
       {id:"u1",name:"Yasmin",email:"yasmin@email.com",phone:"11999990000",address:"Centro, Embu das Artes",orders:4,total_spent:162,last_order:"Hoje",favorite:"Abana Rabo",status:"active",notes:"Cliente gosta de Abana Rabo e sempre pede sem colher.",birthday:""},
       {id:"u2",name:"João",email:"joao@email.com",phone:"11988880000",address:"Jardim Vista Alegre",orders:2,total_spent:91,last_order:"Hoje",favorite:"Uivo de Prestígio",status:"active",notes:"Prefere retirada.",birthday:""},
     ],
-    inventory: readStorage("husky_inventory", null) || [],
-    reviews: readStorage("husky_reviews", null) || [
+    inventory: JSON.parse(localStorage.getItem("husky_inventory") || "null") || [],
+    reviews: JSON.parse(localStorage.getItem("husky_reviews") || "null") || [
       {id:"r1",order_number:"HUS-1023",customer:"Yasmin",rating:5,comment:"Muito caprichado, amei!",product:"Abana Rabo",date:"Hoje",answered:false,tags:["sabor","embalagem"]},
     ],
-    chats: readStorage("husky_chats", null) || [
+    chats: JSON.parse(localStorage.getItem("husky_chats") || "null") || [
       {id:"m1",order_number:"HUS-1024",customer:"Yasmin",sender:"customer",message:"Oi, qual previsão do pedido?",created_at:iso,read:false},
     ],
-    expenses: readStorage("husky_expenses", null) || [
+    expenses: JSON.parse(localStorage.getItem("husky_expenses") || "null") || [
       {id:"e1",name:"Embalagens 250 ml",category:"Embalagens",value:82.50,date:iso.slice(0,10),payment_method:"Pix",recurring:false,quantity:100,supplier:"Fornecedor local",note:"Compra de potes"},
     ],
-    suppliers: readStorage("husky_suppliers", null) || [
+    suppliers: JSON.parse(localStorage.getItem("husky_suppliers") || "null") || [
       {id:"s1",name:"Fornecedor Embalagens",phone:"11977770000",email:"",product:"Potes 250 ml",last_purchase:"Hoje",avg_value:82.5,active:true,notes:"Entrega rápida"},
     ],
-    deliveries: readStorage("husky_deliveries", null) || [],
-    notifications: readStorage("husky_notifications", null) || [
+    deliveries: JSON.parse(localStorage.getItem("husky_deliveries") || "null") || [],
+    notifications: JSON.parse(localStorage.getItem("husky_notifications") || "null") || [
       {id:"n1",type:"order",title:"Novo pedido pago",text:"Pedido HUS-1024 aguardando aceite",read:false,created_at:iso},
       {id:"n2",type:"stock",title:"Estoque baixo",text:"Pata Crocante está esgotado",read:false,created_at:iso},
     ],
-    users: readStorage("husky_users", null) || [
+    users: JSON.parse(localStorage.getItem("husky_users") || "null") || [
       {id:"adm1",name:"Administrador",email:"admin@husky.com",role:"admin",active:true,last_access:"Hoje",permissions:["all"]},
       {id:"op1",name:"Operador",email:"operador@husky.com",role:"operator",active:true,last_access:"",permissions:["orders","chat","products"]},
     ],
-    settings: readStorage("husky_settings", null) || {store_name:"Husky Confeiteiro",description:"Bolos de pote artesanais feitos em Embu das Artes.",phone:"",whatsapp:APP_CONFIG.whatsappNumber,email:"",cnpj:"",address:"Embu das Artes - SP",delivery_policy:"Entrega manual conforme disponibilidade.",cancel_policy:"Cancelamentos avaliados conforme etapa do pedido.",prep_time:25,min_order:18,delivery_fee:APP_CONFIG.deliveryFee,free_delivery_from:APP_CONFIG.freeDeliveryFrom,colors:{primary:APP_CONFIG.storeName},hours:{saturday:"19h às 23h",sunday:"11h às 21h"},capacity:20,accept_scheduled:true,theme:"light"},
-    audit: readStorage("husky_audit", null) || [],
-    issues: readStorage("husky_issues", null) || [],
-    refunds: readStorage("husky_refunds", null) || [],
-    manualOrders: readStorage("husky_manual_orders", null) || [],
-    productionRuns: readStorage("husky_production_runs", null) || [],
-    banners: readStorage("husky_banners", null) || [
+    settings: JSON.parse(localStorage.getItem("husky_settings") || "null") || {store_name:"Husky Confeiteiro",description:"Bolos de pote artesanais feitos em Embu das Artes.",phone:"",whatsapp:APP_CONFIG.whatsappNumber,email:"",cnpj:"",address:"Embu das Artes - SP",delivery_policy:"Entrega manual conforme disponibilidade.",cancel_policy:"Cancelamentos avaliados conforme etapa do pedido.",prep_time:25,min_order:18,delivery_fee:APP_CONFIG.deliveryFee,free_delivery_from:APP_CONFIG.freeDeliveryFrom,colors:{primary:APP_CONFIG.storeName},hours:{saturday:"19h às 23h",sunday:"11h às 21h"},capacity:20,accept_scheduled:true,theme:"light"},
+    audit: JSON.parse(localStorage.getItem("husky_audit") || "null") || [],
+    issues: JSON.parse(localStorage.getItem("husky_issues") || "null") || [],
+    refunds: JSON.parse(localStorage.getItem("husky_refunds") || "null") || [],
+    manualOrders: JSON.parse(localStorage.getItem("husky_manual_orders") || "null") || [],
+    productionRuns: JSON.parse(localStorage.getItem("husky_production_runs") || "null") || [],
+    banners: JSON.parse(localStorage.getItem("husky_banners") || "null") || [
       {id:"b1",title:"Estamos no app",image:assets.banner,active:true,starts_at:"",ends_at:"",link_type:"coupon",link_value:"PRIMEIRACOLHER",clicks:0,sort:1},
     ],
-    channels: readStorage("husky_channels", null) || ["App próprio","WhatsApp","Instagram","iFood","Presencial","Manual"],
-    loyalty: readStorage("husky_loyalty", null) || {enabled:true,rule:"Compre 9 bolos e ganhe 1",points_per_real:1,reward_threshold:9},
+    channels: JSON.parse(localStorage.getItem("husky_channels") || "null") || ["App próprio","WhatsApp","Instagram","iFood","Presencial","Manual"],
+    loyalty: JSON.parse(localStorage.getItem("husky_loyalty") || "null") || {enabled:true,rule:"Compre 9 bolos e ganhe 1",points_per_real:1,reward_threshold:9},
   };
 }
 
@@ -181,6 +157,9 @@ function saveAll(){
   localStorage.setItem("husky_store_open", JSON.stringify(state.storeOpen));
   localStorage.setItem("husky_sound_on", JSON.stringify(state.soundOn));
 }
+
+function newId(){return (crypto.randomUUID?crypto.randomUUID():String(Date.now()))}
+function isUuid(v){return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(v||''))}
 
 async function safeTable(label, builder){
   try{
@@ -225,14 +204,25 @@ async function loadSupabaseData(){
 }
 function setupGestaoRealtime(){
   if(!HAS_SUPABASE||!state.user) return;
-  [state.chatChannel,state.ordersChannel,state.productsChannel].filter(Boolean).forEach(ch=>db.removeChannel(ch));
+  [state.chatChannel,state.ordersChannel,state.productsChannel,state.catalogChannel].filter(Boolean).forEach(ch=>db.removeChannel(ch));
   state.chatChannel=db.channel('gestao-chat').on('postgres_changes',{event:'*',schema:'public',table:'chat_messages'},async()=>{await loadSupabaseData();render();}).subscribe();
   state.ordersChannel=db.channel('gestao-orders').on('postgres_changes',{event:'*',schema:'public',table:'customer_orders'},async()=>{await loadSupabaseData();render();}).subscribe();
   state.productsChannel=db.channel('gestao-products').on('postgres_changes',{event:'*',schema:'public',table:'products'},async()=>{await loadSupabaseData();render();}).subscribe();
+  state.catalogChannel=db.channel('gestao-catalogo')
+    .on('postgres_changes',{event:'*',schema:'public',table:'coupons'},async()=>{await loadSupabaseData();render();})
+    .on('postgres_changes',{event:'*',schema:'public',table:'product_categories'},async()=>{await loadSupabaseData();render();})
+    .on('postgres_changes',{event:'*',schema:'public',table:'product_addons'},async()=>{await loadSupabaseData();render();})
+    .on('postgres_changes',{event:'*',schema:'public',table:'banners'},async()=>{await loadSupabaseData();render();})
+    .on('postgres_changes',{event:'*',schema:'public',table:'store_settings'},async()=>{await loadSupabaseData();render();})
+    .subscribe();
 }
-async function upsertSupabase(table,payload){
-  if(!HAS_SUPABASE||!state.user) return;
-  try{const {error}=await db.from(table).upsert(payload); if(error) throw error;}catch(e){toast('Erro Supabase: '+e.message)}
+async function upsertSupabase(table,payload,options={}){
+  if(!HAS_SUPABASE||!state.user) return true;
+  try{
+    const {error}=await db.from(table).upsert(payload,options);
+    if(error) throw error;
+    return true;
+  }catch(e){toast('Erro Supabase: '+e.message);console.error('Erro Supabase',table,payload,e);return false;}
 }
 async function updateSupabase(table,payload,id){
   if(!HAS_SUPABASE||!state.user) return;
@@ -417,9 +407,48 @@ function markChat(id){const m=state.data.chats.find(x=>String(x.id)===String(id)
 
 function genericCrud(titleText,desc,key,fields){const arr=state.data[key]||[];return `${title(titleText,desc,`<button class="btn blue" onclick="genericOpen('${key}')">Criar</button><button class="btn light" onclick="exportCSV('${key}')">Exportar</button>`)}<div class="table-wrap"><table class="table"><thead><tr>${fields.map(f=>`<th>${f.label}</th>`).join('')}<th>Ações</th></tr></thead><tbody>${arr.map(item=>`<tr>${fields.map(f=>`<td>${renderValue(item[f.name],f)}</td>`).join('')}<td><button class="btn light" onclick="genericOpen('${key}','${item.id}')">Editar</button><button class="btn red" onclick="genericDelete('${key}','${item.id}')">Excluir</button></td></tr>`).join('')}</tbody></table></div>`}
 function renderValue(v,f){if(f.type==='money')return money(v);if(f.type==='bool')return `<span class="status ${v?'active':'closed'}">${v?'Sim':'Não'}</span>`;return v??''}
-function genericOpen(key,id){const map={categories:categoryFields(),addons:addonFields(),coupons:couponFields(),expenses:expenseFields(),suppliers:supplierFields(),banners:bannerFields(),issues:issueFields(),refunds:refundFields()};const fields=map[key];const arr=state.data[key];const item=id?arr.find(x=>x.id===id):{id:String(Date.now())};document.getElementById('root').insertAdjacentHTML('beforeend',`<div class="modal"><div class="modal-box"><div class="modal-head"><h3>${id?'Editar':'Criar'}</h3><button class="btn light" onclick="render()">Fechar</button></div><div class="modal-body"><div class="form-grid">${fields.map(f=>`<div class="field ${f.wide?'wide':''}"><label>${f.label}</label>${f.type==='textarea'?`<textarea id="gf_${f.name}">${item[f.name]||''}</textarea>`:f.type==='bool'?`<select id="gf_${f.name}"><option value="true" ${item[f.name]?'selected':''}>Sim</option><option value="false" ${!item[f.name]?'selected':''}>Não</option></select>`:`<input id="gf_${f.name}" value="${item[f.name]??''}">`}</div>`).join('')}</div><button class="btn blue" onclick="genericSave('${key}','${item.id}',${!id})">Salvar</button></div></div></div>`)}
-function genericSave(key,id,isNew){const map={categories:categoryFields(),addons:addonFields(),coupons:couponFields(),expenses:expenseFields(),suppliers:supplierFields(),banners:bannerFields(),issues:issueFields(),refunds:refundFields()};const fields=map[key];const arr=state.data[key];const item=isNew?{id}:arr.find(x=>x.id===id);fields.forEach(f=>{let val=document.getElementById('gf_'+f.name).value;if(f.type==='number'||f.type==='money')val=Number(val||0);if(f.type==='bool')val=val==='true';item[f.name]=val});if(isNew)arr.unshift(item);audit(`${key}_save`,id);saveAll();syncGenericToSupabase(key,item);render()}
-function syncGenericToSupabase(key,item){if(!HAS_SUPABASE)return;const tableMap={categories:'product_categories',addons:'product_addons',coupons:'coupons',expenses:'expenses',suppliers:'suppliers',banners:'banners',issues:'internal_tickets',refunds:'refunds'};const table=tableMap[key];if(!table)return;let payload={id:item.id};if(key==='categories')payload={id:item.id,name:item.name,sort_order:Number(item.sort||0),active:item.active,schedule:{label:item.schedule||''}};if(key==='coupons')payload={id:item.id,code:item.code,title:item.title,discount_type:item.type,discount_value:Number(item.value||0),min_subtotal:Number(item.min_subtotal||0),min_items:Number(item.min_items||0),max_uses:Number(item.max_uses||0),active:item.active};if(key==='addons')payload={id:item.id,group_name:item.group,name:item.name,price:Number(item.price||0),stock:Number(item.stock||0),required:item.required,active:item.active};if(key==='banners')payload={id:item.id,title:item.title,image_url:item.image,link_type:item.link_type,link_value:item.link_value,sort_order:Number(item.sort||0),active:item.active};if(key==='expenses')payload={id:item.id,name:item.name,category:item.category,value:Number(item.value||0),date:item.date,payment_method:item.payment_method,quantity:Number(item.quantity||0),supplier:item.supplier,note:item.note};if(key==='suppliers')payload={id:item.id,name:item.name,phone:item.phone,email:item.email,product:item.product,avg_value:Number(item.avg_value||0),active:item.active};if(key==='issues')payload={id:item.id,order_number:item.order_number,customer:item.customer,type:item.type,priority:item.priority,responsible:item.responsible,status:item.status,note:item.note};if(key==='refunds')payload={id:item.id,order_number:item.order_number,customer:item.customer,value:Number(item.value||0),type:item.type,status:item.status,reason:item.reason,approved_by:item.approved_by};upsertSupabase(table,payload)}
+function genericOpen(key,id){const map={categories:categoryFields(),addons:addonFields(),coupons:couponFields(),expenses:expenseFields(),suppliers:supplierFields(),banners:bannerFields(),issues:issueFields(),refunds:refundFields()};const fields=map[key];const arr=state.data[key];const item=id?arr.find(x=>x.id===id):{id:newId()};document.getElementById('root').insertAdjacentHTML('beforeend',`<div class="modal"><div class="modal-box"><div class="modal-head"><h3>${id?'Editar':'Criar'}</h3><button class="btn light" onclick="render()">Fechar</button></div><div class="modal-body"><div class="form-grid">${fields.map(f=>`<div class="field ${f.wide?'wide':''}"><label>${f.label}</label>${f.type==='textarea'?`<textarea id="gf_${f.name}">${item[f.name]||''}</textarea>`:f.type==='bool'?`<select id="gf_${f.name}"><option value="true" ${item[f.name]?'selected':''}>Sim</option><option value="false" ${!item[f.name]?'selected':''}>Não</option></select>`:`<input id="gf_${f.name}" value="${item[f.name]??''}">`}</div>`).join('')}</div><button class="btn blue" onclick="genericSave('${key}','${item.id}',${!id})">Salvar</button></div></div></div>`)}
+async function genericSave(key,id,isNew){
+  const map={categories:categoryFields(),addons:addonFields(),coupons:couponFields(),expenses:expenseFields(),suppliers:supplierFields(),banners:bannerFields(),issues:issueFields(),refunds:refundFields()};
+  const fields=map[key];
+  const arr=state.data[key];
+  const item=isNew?{id}:arr.find(x=>x.id===id);
+  fields.forEach(f=>{
+    let val=document.getElementById('gf_'+f.name).value;
+    if(f.type==='number'||f.type==='money')val=Number(val||0);
+    if(f.type==='bool')val=val==='true';
+    item[f.name]=val;
+  });
+  if(isNew)arr.unshift(item);
+  audit(key+'_save',id);
+  saveAll();
+  const ok=await syncGenericToSupabase(key,item);
+  if(ok){await loadSupabaseData();}
+  render();
+}
+async function syncGenericToSupabase(key,item){
+  if(!HAS_SUPABASE) return true;
+  const tableMap={categories:'product_categories',addons:'product_addons',coupons:'coupons',expenses:'expenses',suppliers:'suppliers',banners:'banners',issues:'internal_tickets',refunds:'refunds'};
+  const table=tableMap[key];
+  if(!table) return true;
+  let payload={};
+  let options={};
+  if(isUuid(item.id)) payload.id=item.id;
+  if(key==='categories') payload={...payload,name:item.name,sort_order:Number(item.sort||0),active:item.active,schedule:{label:item.schedule||''}};
+  if(key==='coupons'){
+    const code=String(item.code||'').trim().toUpperCase();
+    if(!code){toast('Informe o código do cupom.');return false;}
+    payload={...payload,code,title:item.title||code,description:item.description||'',discount_type:item.type||'value',discount_value:Number(item.value||0),min_subtotal:Number(item.min_subtotal||0),min_items:Number(item.min_items||0),max_uses:Number(item.max_uses||0),active:item.active!==false,first_purchase_only:!!item.first_purchase,free_delivery:(item.type==='free_delivery')};
+    options={onConflict:'code'};
+  }
+  if(key==='addons') payload={...payload,group_name:item.group,name:item.name,price:Number(item.price||0),stock:Number(item.stock||0),required:item.required,active:item.active};
+  if(key==='banners') payload={...payload,title:item.title,image_url:item.image,link_type:item.link_type,link_value:item.link_value,sort_order:Number(item.sort||0),active:item.active};
+  if(key==='expenses') payload={...payload,name:item.name,category:item.category,value:Number(item.value||0),date:item.date,payment_method:item.payment_method,quantity:Number(item.quantity||0),supplier:item.supplier,note:item.note};
+  if(key==='suppliers') payload={...payload,name:item.name,phone:item.phone,email:item.email,product:item.product,avg_value:Number(item.avg_value||0),active:item.active};
+  if(key==='issues') payload={...payload,order_number:item.order_number,customer:item.customer,type:item.type,priority:item.priority,responsible:item.responsible,status:item.status,note:item.note};
+  if(key==='refunds') payload={...payload,order_number:item.order_number,customer:item.customer,value:Number(item.value||0),type:item.type,status:item.status,reason:item.reason,approved_by:item.approved_by};
+  return await upsertSupabase(table,payload,options);
+}
 function genericDelete(key,id){if(confirm('Excluir item?')){state.data[key]=state.data[key].filter(x=>x.id!==id);audit(`${key}_delete`,id);saveAll();render()}}
 function categoryFields(){return [{name:'name',label:'Nome'},{name:'sort',label:'Ordem',type:'number'},{name:'schedule',label:'Horário'},{name:'active',label:'Ativo',type:'bool'}]}
 function addonFields(){return [{name:'group',label:'Grupo'},{name:'name',label:'Nome'},{name:'price',label:'Preço',type:'money'},{name:'stock',label:'Estoque',type:'number'},{name:'required',label:'Obrigatório',type:'bool'},{name:'active',label:'Ativo',type:'bool'}]}

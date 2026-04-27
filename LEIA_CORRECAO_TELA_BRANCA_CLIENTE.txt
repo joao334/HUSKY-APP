@@ -1,0 +1,13 @@
+CORREÇÃO DA TELA BRANCA NO APP DO CLIENTE
+
+O que foi corrigido:
+- O app agora mostra uma tela de carregamento e nunca fica totalmente branco.
+- Dados antigos/corrompidos do carrinho são normalizados automaticamente.
+- Se o app demorar ou falhar ao iniciar, aparece uma tela de recuperação.
+- Foi adicionado vercel.json para evitar cache antigo da Vercel.
+
+Depois de subir na Vercel:
+1. Acesse https://husky-app.vercel.app/limpar-sessoes.html
+2. Limpe as sessões antigas.
+3. Abra https://husky-app.vercel.app/ em guia anônima para testar.
+4. Se continuar branco, abra F12 > Console e copie o erro.
