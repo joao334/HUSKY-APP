@@ -202,6 +202,7 @@ async function updateSupabase(table,payload,id){
 }
 function money(v){return Number(v||0).toLocaleString("pt-BR",{style:"currency",currency:"BRL"})}
 function fmtDate(v){try{return new Date(v).toLocaleString("pt-BR",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"})}catch(e){return v}}
+function escapeHtml(str){return String(str??"").replace(/[&<>'"]/g,function(ch){return {"&":"&amp;","<":"&lt;",">":"&gt;","\'":"&#39;","\"":"&quot;"}[ch]||ch})}
 function toast(msg){const el=document.getElementById("toast");el.textContent=msg;el.classList.remove("hidden");setTimeout(()=>el.classList.add("hidden"),2600)}
 function audit(action, details){state.data.audit.unshift({id:crypto.randomUUID?.()||Date.now(),user:state.user?.email||"local",action,details,created_at:new Date().toISOString()});saveAll()}
 function setRoute(route, sub="overview"){state.route=route;state.subroute=sub;state.selectedOrder=null;render()}
