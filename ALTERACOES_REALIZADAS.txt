@@ -1,19 +1,18 @@
-ALTERAÇÕES REALIZADAS NESTA VERSÃO
+ALTERAÇÕES REALIZADAS
+=====================
 
-1. Mantido app 100% sem Node para abrir pelo index.html.
-2. Pasta assets/husky preenchida com logos, fotos dos bolos e mascotes enviados.
-3. Index.html mantido preparado para:
-   - catálogo;
-   - carrinho;
-   - cupons;
-   - login por código via Supabase;
-   - chat;
-   - pedidos;
-   - Pix via Supabase Edge Function.
-4. O app continua sem criar pedido como pago sozinho: pedido só deve entrar depois da confirmação do pagamento pela função/gateway.
+- Removida a engrenagem de configuração do app do cliente.
+- Removido o modal de configuração com Project URL, anon key, funções de Pix e WhatsApp.
+- O cliente não consegue mais editar ou visualizar essas opções dentro do aplicativo.
+- A configuração agora fica somente no código, em const APP_CONFIG, no arquivo index.html.
+- Atualizado README_PASSO_A_PASSO.txt com o novo modo de configuração.
 
-COMO ABRIR
-1. Extraia o ZIP.
-2. Abra a pasta husky_cliente_sem_node.
-3. Abra o index.html no navegador.
-4. Clique na engrenagem para configurar Supabase URL, anon key, funções Pix e WhatsApp.
+Para conectar Supabase antes de publicar, edite o index.html e preencha:
+
+const APP_CONFIG = {
+  supabaseUrl: "SUA_PROJECT_URL",
+  supabaseAnonKey: "SUA_ANON_KEY",
+  pixFunction: "create-pix-payment",
+  checkFunction: "check-payment-status",
+  whatsapp: "5511999999999"
+};

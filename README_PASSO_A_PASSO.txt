@@ -27,12 +27,21 @@ COMO ABRIR
 
 COMO CONFIGURAR O SUPABASE NO APP
 ---------------------------------
-1. Abra o index.html.
-2. Clique no botão de engrenagem ⚙️ no canto inferior direito.
-3. Cole:
-   - Project URL
-   - anon public key
-4. Clique em Salvar configuração.
+A engrenagem foi removida do aplicativo do cliente.
+O cliente não tem acesso à Project URL, anon key, funções de Pix ou WhatsApp.
+
+Para configurar antes de publicar:
+1. Abra o arquivo index.html no Bloco de Notas ou VS Code.
+2. Procure por: const APP_CONFIG = {
+3. Preencha:
+   - supabaseUrl
+   - supabaseAnonKey
+   - pixFunction
+   - checkFunction
+   - whatsapp
+4. Salve o arquivo.
+
+A anon key é pública, mas não fica editável para o cliente dentro do app.
 
 ONDE PEGAR AS CHAVES
 --------------------
