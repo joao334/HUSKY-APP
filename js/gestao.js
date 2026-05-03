@@ -24,6 +24,7 @@
     { id: "clientes", label: "Clientes", icon: "users", group: "Atendimento" },
     { id: "cupons", label: "Cupons", icon: "ticket", group: "Marketing" },
     { id: "marketing", label: "Marketing", icon: "megaphone", group: "Marketing" },
+    { id: "integracoes", label: "Husk iFood", icon: "plug-zap", group: "Marketing" },
     { id: "entregas", label: "Entregas", icon: "bike", group: "Operacao" },
     { id: "financeiro", label: "Financeiro", icon: "chart-no-axes-combined", group: "Analise" },
     { id: "relatorios", label: "Relatorios", icon: "file-spreadsheet", group: "Analise" },
@@ -129,8 +130,8 @@
     return `
       <aside class="admin-sidebar">
         <div class="brand">
-          <img src="assets/husky/logo.png" alt="Husky Confeitaria">
-          <div><strong>Gestao Husky</strong><span>Parceiro delivery</span></div>
+          <img src="assets/husky/logo.png" alt="Husk iFood">
+          <div><strong>${esc(data.settings.appName || "Husk iFood")}</strong><span>Gestao simples da loja</span></div>
         </div>
         <nav class="admin-nav">
           ${routes.map((route) => {
@@ -155,7 +156,7 @@
       <header class="admin-topbar">
         <div class="header-main">
           <strong>${esc(route?.label || "Detalhe do pedido")}</strong>
-          <span>${esc(data.settings.storeName)} · ${data.settings.storeOpen ? "loja aberta" : "loja fechada"} · ${unread} mensagens</span>
+          <span>${esc(data.settings.appName || "Husk iFood")} | ${data.settings.storeOpen ? "loja aberta" : "loja fechada"} | ${unread} mensagens</span>
         </div>
         <div class="toolbar">
           <label class="searchbar">${icon("search")}<input type="search" data-admin-search value="${esc(ui.search)}" placeholder="Buscar pedido, cliente, produto..."></label>
@@ -540,6 +541,55 @@
     return `<div class="split"><section class="panel"><h3>Banners e feed</h3><div class="stack">${data.marketingBanners.map((banner) => `<div class="cart-item"><div><strong>${esc(banner.title)}</strong><span>${esc(banner.subtitle)}</span></div><span class="status ${banner.active ? "open" : "closed"}">${banner.active ? "ativo" : "pausado"}</span></div>`).join("")}</div></section><section class="panel"><h3>Instagram</h3><div class="stack">${data.instagramPosts.map((post) => `<div class="cart-item"><div><strong>${esc(post.title)}</strong><span>${esc(post.type)} · ${esc(post.status)} · alcance ${post.reach}</span></div><img src="${esc(post.image)}" alt="${esc(post.title)}" style="width:64px;height:64px;object-fit:cover;border-radius:var(--radius)"></div>`).join("")}</div><p class="notice">Integracao real: conectar Instagram Graph API em uma Edge Function e salvar em instagram_posts.</p></section></div>`;
   }
 
+  function renderIntegracoes(data) {
+    const integrations = data.settings.integrations || {};
+    const google = integrations.google || {};
+    const ifood = integrations.ifood || {};
+    return `
+      <section>
+        <div class="section-head" style="margin-top:0">
+          <div><h2>Husk iFood - integracoes</h2><p>Conta Google, iFood, cardapio, pedidos e dados salvos do cliente.</p></div>
+          ${liveBadge("configuracao salva")}
+        </div>
+        <div class="split">
+          <form class="panel form-grid" data-google-settings-form>
+            <h3 class="field full">Login com Google</h3>
+            <p class="field full product-desc">O cliente entra com Google, fica com conta salva e os pedidos ficam ligados ao perfil. Para login real, preencha o Client ID do Google Cloud.</p>
+            <label class="field full"><span>Google Client ID</span><input name="googleClientId" value="${esc(google.clientId || data.settings.googleClientId || "")}" placeholder="000000000000-xxxx.apps.googleusercontent.com"></label>
+            <div class="field full integration-row">
+              <span class="integration-status ${google.clientId ? "on" : "warn"}">${google.clientId ? "pronto para Google real" : "modo demo"}</span>
+              <button class="btn brand" type="submit">${icon("save")} Salvar Google</button>
+            </div>
+          </form>
+          <form class="panel form-grid" data-ifood-settings-form>
+            <h3 class="field full">Integracao iFood</h3>
+            <p class="field full product-desc">Estrutura preparada para receber pedidos, sincronizar cardapio e controlar disponibilidade. Em producao, o segredo do iFood deve ficar em backend seguro.</p>
+            <label class="field"><span>Merchant ID</span><input name="merchantId" value="${esc(ifood.merchantId || "")}" placeholder="ID da loja no iFood"></label>
+            <label class="field"><span>Client ID</span><input name="clientId" value="${esc(ifood.clientId || "")}" placeholder="Client ID"></label>
+            <label class="field full"><span>Client Secret</span><input name="clientSecret" value="${esc(ifood.clientSecret || "")}" placeholder="Guardar em backend/Edge Function"></label>
+            <label class="field"><span>Importar pedidos automaticamente</span><select name="autoImportOrders"><option value="true" ${ifood.autoImportOrders !== false ? "selected" : ""}>Sim</option><option value="false" ${ifood.autoImportOrders === false ? "selected" : ""}>Nao</option></select></label>
+            <label class="field"><span>Sincronizar cardapio automaticamente</span><select name="autoSyncMenu"><option value="true" ${ifood.autoSyncMenu !== false ? "selected" : ""}>Sim</option><option value="false" ${ifood.autoSyncMenu === false ? "selected" : ""}>Nao</option></select></label>
+            <button class="btn brand" type="submit">${icon("save")} Salvar iFood</button>
+            <button class="btn light" type="button" data-ifood-action="sync-menu">${icon("refresh-cw")} Sincronizar cardapio</button>
+            <button class="btn light" type="button" data-ifood-action="import-orders">${icon("download")} Importar pedidos</button>
+          </form>
+        </div>
+        <div class="metric-grid" style="margin-top:14px">
+          <div class="metric"><span>Google</span><strong>${google.clientId ? "Pronto" : "Demo"}</strong><span>Login e conta salva</span></div>
+          <div class="metric"><span>iFood</span><strong>${ifood.enabled ? "Conectado" : "Aguardando"}</strong><span>${ifood.lastSyncAt ? `Ultima sync ${Store.dateTime(ifood.lastSyncAt)}` : "Sem sincronizacao ainda"}</span></div>
+          <div class="metric"><span>Cardapio</span><strong>${data.products.filter((item) => item.active).length}</strong><span>produtos ativos</span></div>
+          <div class="metric"><span>Pedidos</span><strong>${data.orders.length}</strong><span>base Husk iFood</span></div>
+        </div>
+        <section class="panel" style="margin-top:14px">
+          <h3>Funcoes tipo iFood preparadas</h3>
+          <div class="coupon-grid compact-grid">
+            ${["Conta do cliente", "Login Google", "Cardapio visual", "Carrinho salvo", "Cupons", "Favoritos", "Acompanhamento", "Chat ao vivo", "Avaliacoes", "Retirada/entrega/agendamento", "Financeiro", "Gestao de loja aberta"].map((item) => `<div class="easy-card"><strong>${esc(item)}</strong><span class="product-desc">Disponivel no fluxo Husk iFood.</span></div>`).join("")}
+          </div>
+        </section>
+      </section>
+    `;
+  }
+
   function renderConfig(data) {
     return `
       <div class="split">
@@ -581,12 +631,19 @@
     if (ui.route === "entregas") return renderEntregas(data);
     if (ui.route === "avaliacoes") return renderAvaliacoes(data);
     if (ui.route === "marketing") return renderMarketing(data);
+    if (ui.route === "integracoes") return renderIntegracoes(data);
     if (ui.route === "config") return renderConfig(data);
     return renderDashboard(data);
   }
 
   function renderMobileNav() {
-    const mobile = ["dashboard", "pedidos", "cozinha", "caixa", "chat"].map((id) => routes.find((route) => route.id === id));
+    const mobile = [
+      { id: "dashboard", label: "Inicio" },
+      { id: "pedidos", label: "Pedidos" },
+      { id: "produtos", label: "Cardapio" },
+      { id: "chat", label: "Chat" },
+      { id: "integracoes", label: "Husk" }
+    ].map((item) => Object.assign({}, routes.find((route) => route.id === item.id), { label: item.label }));
     return `<nav class="mobile-tabbar" aria-label="Navegacao da gestao">${mobile.map((item) => `<button class="${ui.route === item.id ? "active" : ""}" data-route="${item.id}">${icon(item.icon)}<span>${esc(item.label)}</span></button>`).join("")}</nav>`;
   }
 
@@ -762,6 +819,51 @@
       });
       toast("Despesa lancada.");
     });
+    root.querySelector("[data-google-settings-form]")?.addEventListener("submit", (event) => {
+      event.preventDefault();
+      const form = event.currentTarget;
+      const data = Store.read();
+      const integrations = Object.assign({}, data.settings.integrations || {});
+      integrations.google = Object.assign({}, integrations.google || {}, {
+        enabled: true,
+        clientId: form.querySelector("[name='googleClientId']").value.trim(),
+        status: form.querySelector("[name='googleClientId']").value.trim() ? "ready" : "demo",
+        lastLoginAt: integrations.google?.lastLoginAt || ""
+      });
+      Store.updateSettings({ googleClientId: integrations.google.clientId, integrations });
+      toast("Google Login salvo.");
+    });
+    root.querySelector("[data-ifood-settings-form]")?.addEventListener("submit", (event) => {
+      event.preventDefault();
+      const form = event.currentTarget;
+      const data = Store.read();
+      const integrations = Object.assign({}, data.settings.integrations || {});
+      integrations.ifood = Object.assign({}, integrations.ifood || {}, {
+        enabled: Boolean(form.querySelector("[name='merchantId']").value.trim() && form.querySelector("[name='clientId']").value.trim()),
+        merchantId: form.querySelector("[name='merchantId']").value.trim(),
+        clientId: form.querySelector("[name='clientId']").value.trim(),
+        clientSecret: form.querySelector("[name='clientSecret']").value.trim(),
+        autoImportOrders: form.querySelector("[name='autoImportOrders']").value === "true",
+        autoSyncMenu: form.querySelector("[name='autoSyncMenu']").value === "true",
+        status: "saved",
+        lastSyncAt: integrations.ifood?.lastSyncAt || "",
+        lastImportAt: integrations.ifood?.lastImportAt || ""
+      });
+      Store.updateSettings({ integrations });
+      toast("Integracao iFood salva.");
+    });
+    root.querySelectorAll("[data-ifood-action]").forEach((button) => button.addEventListener("click", () => {
+      const data = Store.read();
+      const integrations = Object.assign({}, data.settings.integrations || {});
+      integrations.ifood = Object.assign({}, integrations.ifood || {}, {
+        enabled: true,
+        status: button.dataset.ifoodAction === "sync-menu" ? "menu_synced" : "orders_imported",
+        lastSyncAt: button.dataset.ifoodAction === "sync-menu" ? new Date().toISOString() : integrations.ifood?.lastSyncAt || "",
+        lastImportAt: button.dataset.ifoodAction === "import-orders" ? new Date().toISOString() : integrations.ifood?.lastImportAt || ""
+      });
+      Store.updateSettings({ integrations });
+      toast(button.dataset.ifoodAction === "sync-menu" ? "Cardapio marcado como sincronizado." : "Pedidos iFood marcados como importados.");
+    }));
     root.querySelector("[data-settings-form]")?.addEventListener("submit", (event) => {
       event.preventDefault();
       const form = event.currentTarget;

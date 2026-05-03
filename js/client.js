@@ -40,6 +40,89 @@
     { id: "logo", label: "Husky", image: "assets/husky/logo.png" }
   ];
 
+  function googleClientId(data) {
+    return data?.settings?.integrations?.google?.clientId || data?.settings?.googleClientId || window.HUSKY_CONFIG?.googleClientId || "";
+  }
+
+  function decodeJwtPayload(token) {
+    try {
+      const payload = token.split(".")[1];
+      const json = atob(payload.replace(/-/g, "+").replace(/_/g, "/"));
+      return JSON.parse(decodeURIComponent(Array.from(json).map((char) => `%${char.charCodeAt(0).toString(16).padStart(2, "0")}`).join("")));
+    } catch (error) {
+      return null;
+    }
+  }
+
+  function applyGoogleAccount(payload) {
+    const current = Store.getProfile();
+    const profile = Store.setProfile({
+      id: payload.sub ? `google-${payload.sub}` : current.id,
+      name: payload.name || current.name,
+      email: payload.email || current.email,
+      phone: current.phone,
+      avatarUrl: payload.picture || current.avatarUrl || "",
+      authProvider: "google",
+      googleSub: payload.sub || current.googleSub || "",
+      savedAccount: true
+    });
+    const data = Store.read();
+    data.settings.integrations = data.settings.integrations || {};
+    data.settings.integrations.google = Object.assign({}, data.settings.integrations.google || {}, {
+      enabled: true,
+      status: googleClientId(data) ? "connected" : "demo",
+      lastLoginAt: new Date().toISOString()
+    });
+    Store.write(data);
+    toast(`Conta Google salva para ${profile.name}.`);
+  }
+
+  function googleDemoLogin() {
+    applyGoogleAccount({
+      sub: "demo",
+      name: "Cliente Google",
+      email: "cliente.google@husky.app",
+      picture: "assets/husky/mascote.png"
+    });
+  }
+
+  function loginWithGoogle() {
+    const data = Store.read();
+    const clientId = googleClientId(data);
+    if (!clientId || !window.google?.accounts?.id) {
+      googleDemoLogin();
+      return;
+    }
+    window.google.accounts.id.initialize({
+      client_id: clientId,
+      callback: (response) => {
+        const payload = decodeJwtPayload(response.credential);
+        if (payload) applyGoogleAccount(payload);
+      }
+    });
+    window.google.accounts.id.prompt();
+  }
+
+  function googleLoginCard(data, compact) {
+    const profile = Store.getProfile();
+    const connected = profile.authProvider === "google";
+    return `
+      <div class="account-card ${compact ? "compact" : ""}">
+        <div class="account-row">
+          <div class="brand">
+            <img class="account-avatar" src="${esc(profile.avatarUrl || "assets/husky/mascote.png")}" alt="">
+            <div>
+              <strong>${connected ? esc(profile.name) : "Entre com Google"}</strong>
+              <span>${connected ? esc(profile.email || "Conta salva") : "Salve pedidos, enderecos, cupons e favoritos"}</span>
+            </div>
+          </div>
+          <span class="integration-status ${connected ? "on" : "warn"}">${connected ? "conectado" : "demo/Google"}</span>
+        </div>
+        <button class="btn google full" type="button" data-google-login><strong>G</strong> ${connected ? "Trocar conta Google" : "Entrar com Google"}</button>
+      </div>
+    `;
+  }
+
   function esc(value) {
     return String(value == null ? "" : value)
       .replace(/&/g, "&amp;")
@@ -341,8 +424,8 @@
     return `
       <section class="hero-strip">
         <div class="hero-copy">
-          <span class="eyebrow">Delivery proprio Husky</span>
-          <h1>${esc(banner?.title || "Husky Confeiteiro")}</h1>
+          <span class="eyebrow">${esc(data.settings.appName || "Husk iFood")} · delivery facil</span>
+          <h1>${esc(banner?.title || "Peça na Husky em poucos toques")}</h1>
           <p>${esc(banner?.subtitle || "Escolha, acompanhe, converse com a loja e peca de novo em poucos toques.")}</p>
           ${renderStoreStatus(data)}
           <div class="hero-actions">
@@ -509,6 +592,7 @@
         <form class="checkout-grid" data-checkout-form>
           <div class="panel form-grid">
             <h3 class="field full">Login ou cadastro rapido</h3>
+            <div class="field full">${googleLoginCard(data, true)}</div>
             <label class="field"><span>Nome completo</span><input name="name" required value="${esc(profile.name)}"></label>
             <label class="field"><span>Telefone / WhatsApp</span><input name="phone" required value="${esc(profile.phone)}"></label>
             <label class="field"><span>E-mail</span><input name="email" value="${esc(profile.email)}"></label>
@@ -852,6 +936,7 @@
         <div class="profile-grid">
           <form class="panel form-grid" data-profile-form>
             <h3 class="field full">Meus dados</h3>
+            <div class="field full">${googleLoginCard(data)}</div>
             <label class="field"><span>Nome</span><input name="name" value="${esc(profile.name)}"></label>
             <label class="field"><span>Telefone</span><input name="phone" value="${esc(profile.phone)}"></label>
             <label class="field"><span>E-mail</span><input name="email" value="${esc(profile.email)}"></label>
@@ -901,6 +986,9 @@
   function bind() {
     root.querySelectorAll("[data-route]").forEach((button) => {
       button.addEventListener("click", () => route(button.dataset.route));
+    });
+    root.querySelectorAll("[data-google-login]").forEach((button) => {
+      button.addEventListener("click", loginWithGoogle);
     });
     root.querySelectorAll("[data-category]").forEach((button) => {
       button.addEventListener("click", () => {
@@ -1062,7 +1150,7 @@
         <aside class="client-sidebar">
           <div class="brand">
             <img src="assets/husky/logo.png" alt="Husky Confeitaria">
-            <div><strong>${esc(data.settings.brandName)}</strong><span>${esc(data.settings.city)}</span></div>
+            <div><strong>${esc(data.settings.appName || data.settings.brandName)}</strong><span>${esc(data.settings.city)}</span></div>
           </div>
           <nav class="nav-list">${renderNav()}</nav>
           <div class="side-block"><small>Funcionamento</small><strong>${data.settings.storeOpen ? "Aberta" : "Fechada"}</strong><span class="product-desc">${esc(data.settings.announcement)}</span></div>

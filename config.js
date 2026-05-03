@@ -6,6 +6,22 @@ window.HUSKY_CONFIG = {
   instagramHandle: "huskybolos",
   instagramUrl: "https://www.instagram.com/huskybolos/",
 
+  appName: "Husk iFood",
+
+  // Google Login opcional. Para login real, crie um OAuth Client ID no Google Cloud
+  // e coloque o valor abaixo. Sem Client ID, o app usa um login demo salvo no navegador.
+  googleClientId: "",
+
+  // Integracao iFood opcional. Preencha com os dados oficiais da conta/parceiro.
+  ifood: {
+    enabled: false,
+    merchantId: "",
+    clientId: "",
+    clientSecret: "",
+    autoImportOrders: true,
+    autoSyncMenu: true
+  },
+
   // Supabase opcional. O app funciona em modo demonstracao com localStorage.
   // Para publicar com dados reais, preencha abaixo e rode o SQL da pasta sql.
   supabaseUrl: "https://wnhmcbozesilmokyemgh.supabase.co",

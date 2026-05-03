@@ -143,6 +143,9 @@
         email: "cliente@demo.com",
         birthday: "",
         avatarUrl: "",
+        authProvider: "demo",
+        googleSub: "",
+        savedAccount: true,
         address: "Rua Exemplo, 123 - Centro",
         neighborhood: "Centro"
       };

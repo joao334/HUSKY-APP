@@ -19,6 +19,7 @@
     settings: {
       storeOpen: true,
       paused: false,
+      appName: cfg.appName || "Husk iFood",
       brandName: cfg.brandName || "Husky Confeitaria",
       storeName: cfg.storeName || "Husky Confeitaria e Caixa",
       city: cfg.city || "Embu das Artes",
@@ -42,6 +43,27 @@
       allowDelivery: true,
       allowChat: true,
       allowReviews: true,
+      googleClientId: cfg.googleClientId || "",
+      googleLoginEnabled: true,
+      integrations: {
+        google: {
+          enabled: true,
+          clientId: cfg.googleClientId || "",
+          status: cfg.googleClientId ? "ready" : "demo",
+          lastLoginAt: ""
+        },
+        ifood: {
+          enabled: Boolean(cfg.ifood?.enabled),
+          merchantId: cfg.ifood?.merchantId || "",
+          clientId: cfg.ifood?.clientId || "",
+          clientSecret: cfg.ifood?.clientSecret || "",
+          autoImportOrders: cfg.ifood?.autoImportOrders !== false,
+          autoSyncMenu: cfg.ifood?.autoSyncMenu !== false,
+          status: cfg.ifood?.enabled ? "ready" : "not_connected",
+          lastSyncAt: "",
+          lastImportAt: ""
+        }
+      },
       loyaltyRule: "A cada 10 pedidos, ganhe 1 bolo de pote.",
       serviceArea: cfg.serviceArea || ["Centro", "Jardim Vista Alegre", "Parque Pirajussara", "Santo Eduardo"],
       openingHours: cfg.openingHours || {
