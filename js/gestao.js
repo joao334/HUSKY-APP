@@ -31,6 +31,15 @@
     { id: "config", label: "Configuracoes", icon: "settings", group: "Sistema" }
   ];
 
+  const chatEmojis = ["😍", "😋", "🥳", "💙", "🍰", "✨", "✅", "🚚"];
+  const chatStickers = [
+    { id: "mascote", label: "Mascote", image: "assets/husky/mascote.png" },
+    { id: "brigadeiro", label: "Brigadeiro", image: "assets/husky/bolo-brigadeiro.png" },
+    { id: "maracuja", label: "Abana Rabo", image: "assets/husky/bolo-maracuja.png" },
+    { id: "prestigio", label: "Prestigio", image: "assets/husky/bolo-prestigio.png" },
+    { id: "logo", label: "Husky", image: "assets/husky/logo.png" }
+  ];
+
   const flow = ["pending", "accepted", "preparing", "ready", "waiting_pickup", "out_for_delivery", "delivered", "completed"];
   const nextStatus = {
     pending: "accepted",
@@ -63,6 +72,26 @@
         render();
       }
     }, 2600);
+  }
+
+  function liveBadge(text) {
+    return `<span class="live-badge"><span></span>${esc(text)}</span>`;
+  }
+
+  function chatPreview(message) {
+    if (!message) return "";
+    return message.stickerLabel || message.text || "Figurinha";
+  }
+
+  function chatBubble(message) {
+    const fromClient = message.from === "customer";
+    const media = message.stickerUrl || message.imageUrl;
+    return `
+      <div class="bubble ${fromClient ? "store" : "customer"} ${media ? "sticker-bubble" : ""}">
+        ${media ? `<img class="chat-sticker" src="${esc(media)}" alt="${esc(message.stickerLabel || "Figurinha")}"><strong>${esc(message.stickerLabel || message.text || "Figurinha")}</strong>` : esc(message.text)}
+        <small>${Store.dateTime(message.createdAt)}</small>
+      </div>
+    `;
   }
 
   function setRoute(route) {
@@ -445,10 +474,14 @@
   function renderChat(data) {
     const thread = data.chatThreads.find((item) => item.id === ui.selectedThread) || data.chatThreads[0];
     return `
+      <div class="section-head" style="margin-top:0">
+        <div><h2>Chat ao vivo</h2><p>Atendimento dos pedidos com emojis, figurinhas e atualizacao imediata.</p></div>
+        ${liveBadge("sincronizado")}
+      </div>
       <div class="admin-chat">
-        <aside class="thread-list">${data.chatThreads.map((item) => `<button class="thread-btn ${thread?.id === item.id ? "active" : ""}" data-thread="${item.id}"><strong>${esc(item.customerName)} ${item.unread ? `<span class="mini-pill">${item.unread}</span>` : ""}</strong><span>${esc(item.messages[item.messages.length - 1]?.text || "")}</span></button>`).join("")}</aside>
+        <aside class="thread-list">${data.chatThreads.map((item) => `<button class="thread-btn ${thread?.id === item.id ? "active" : ""}" data-thread="${item.id}"><strong>${esc(item.customerName)} ${item.unread ? `<span class="mini-pill">${item.unread}</span>` : ""}</strong><span>${esc(chatPreview(item.messages[item.messages.length - 1]))}</span></button>`).join("")}</aside>
         <section class="message-panel" style="border:0;box-shadow:none;border-radius:0">
-          ${thread ? `<div class="message-head"><div><strong>${esc(thread.customerName)}</strong><br><small>${esc(thread.phone || "")}</small></div><span class="status open">${esc(thread.status)}</span></div><div class="message-body">${thread.messages.map((msg) => `<div class="bubble ${msg.from === "customer" ? "store" : "customer"}">${esc(msg.text)}<small>${Store.dateTime(msg.createdAt)}</small></div>`).join("")}</div><div class="quick-row" style="padding:12px 12px 0">${["Seu pedido ja esta em preparo.", "Pode retirar hoje sim.", "Tivemos um pequeno atraso, mas ja estamos finalizando.", "Pode confirmar o endereco?"].map((text) => `<button data-admin-quick="${esc(text)}">${esc(text)}</button>`).join("")}</div><form class="message-compose" data-admin-chat-form><input name="message" placeholder="Responder cliente" autocomplete="off"><button class="icon-btn brand">${icon("send")}</button></form>` : `<div class="cart-empty"><strong>Sem conversas</strong></div>`}
+          ${thread ? `<div class="message-head"><div><strong>${esc(thread.customerName)}</strong><br><small>${esc(thread.phone || "")}</small></div><span class="status open">${esc(thread.status)}</span></div><div class="message-body">${thread.messages.map(chatBubble).join("")}</div><div class="quick-row" style="padding:12px 12px 0">${["Seu pedido ja esta em preparo. 😋", "Pode retirar hoje sim. ✅", "Tivemos um pequeno atraso, mas ja estamos finalizando.", "Pode confirmar o endereco?"].map((text) => `<button data-admin-quick="${esc(text)}">${esc(text)}</button>`).join("")}</div><div class="emoji-row">${chatEmojis.map((emoji) => `<button type="button" data-admin-emoji="${esc(emoji)}">${emoji}</button>`).join("")}</div><div class="sticker-row">${chatStickers.map((sticker) => `<button type="button" data-admin-sticker="${sticker.id}"><img src="${esc(sticker.image)}" alt="">${esc(sticker.label)}</button>`).join("")}</div><form class="message-compose" data-admin-chat-form><input name="message" placeholder="Responder cliente" autocomplete="off"><button class="icon-btn brand">${icon("send")}</button></form>` : `<div class="cart-empty"><strong>Sem conversas</strong></div>`}
         </section>
       </div>
     `;
@@ -695,10 +728,27 @@
     root.querySelector("[data-admin-chat-form]")?.addEventListener("submit", (event) => {
       event.preventDefault();
       const input = event.currentTarget.querySelector("[name='message']");
+      if (!input.value.trim()) return;
       Store.addChatMessage(ui.selectedThread, "store", input.value);
       input.value = "";
       toast("Mensagem enviada.");
     });
+    root.querySelectorAll("[data-admin-emoji]").forEach((button) => button.addEventListener("click", () => {
+      const input = root.querySelector("[data-admin-chat-form] [name='message']");
+      if (!input) return;
+      input.value = `${input.value}${input.value ? " " : ""}${button.dataset.adminEmoji}`;
+      input.focus();
+    }));
+    root.querySelectorAll("[data-admin-sticker]").forEach((button) => button.addEventListener("click", () => {
+      const sticker = chatStickers.find((item) => item.id === button.dataset.adminSticker);
+      if (!sticker) return;
+      Store.addChatMessage(ui.selectedThread, "store", sticker.label, "", {
+        stickerId: sticker.id,
+        stickerUrl: sticker.image,
+        stickerLabel: sticker.label
+      });
+      toast("Figurinha enviada.");
+    }));
     root.querySelectorAll("[data-admin-quick]").forEach((button) => button.addEventListener("click", () => Store.addChatMessage(ui.selectedThread, "store", button.dataset.adminQuick)));
     root.querySelector("[data-expense-form]")?.addEventListener("submit", (event) => {
       event.preventDefault();

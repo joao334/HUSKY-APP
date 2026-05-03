@@ -31,6 +31,15 @@
     { id: "profile", label: "Perfil", icon: "user-round" }
   ];
 
+  const chatEmojis = ["😍", "😋", "🥳", "💙", "🍰", "✨", "✅", "🚚"];
+  const chatStickers = [
+    { id: "mascote", label: "Mascote", image: "assets/husky/mascote.png" },
+    { id: "brigadeiro", label: "Brigadeiro", image: "assets/husky/bolo-brigadeiro.png" },
+    { id: "maracuja", label: "Abana Rabo", image: "assets/husky/bolo-maracuja.png" },
+    { id: "prestigio", label: "Prestigio", image: "assets/husky/bolo-prestigio.png" },
+    { id: "logo", label: "Husky", image: "assets/husky/logo.png" }
+  ];
+
   function esc(value) {
     return String(value == null ? "" : value)
       .replace(/&/g, "&amp;")
@@ -193,15 +202,35 @@
     toast(`Pedido ${order.number} enviado.`);
   }
 
-  function sendChat(text) {
-    const value = String(text || "").trim();
-    if (!value) return;
+  function sendChat(text, extra) {
+    const sticker = extra?.sticker || null;
+    const value = String(text || sticker?.label || "").trim();
+    if (!value && !sticker) return;
     const data = Store.read();
     const orderId = ui.orderId || data.orders.find((order) => order.customerId === Store.getProfile().id)?.id || "";
     const thread = data.chatThreads.find((item) => item.orderId === orderId) || data.chatThreads[0];
-    Store.addChatMessage(thread?.id || orderId || "thread-open", "customer", value);
+    Store.addChatMessage(thread?.id || orderId || "thread-open", "customer", value, "", sticker ? {
+      stickerId: sticker.id,
+      stickerUrl: sticker.image,
+      stickerLabel: sticker.label
+    } : null);
     ui.route = "chat";
     render();
+  }
+
+  function chatBubble(message) {
+    const isCustomer = message.from === "customer";
+    const media = message.stickerUrl || message.imageUrl;
+    return `
+      <div class="bubble ${isCustomer ? "customer" : "store"} ${media ? "sticker-bubble" : ""}">
+        ${media ? `<img class="chat-sticker" src="${esc(media)}" alt="${esc(message.stickerLabel || "Figurinha")}"><strong>${esc(message.stickerLabel || message.text || "Figurinha")}</strong>` : esc(message.text)}
+        <small>${Store.dateTime(message.createdAt)}</small>
+      </div>
+    `;
+  }
+
+  function liveBadge(text) {
+    return `<span class="live-badge"><span></span>${esc(text)}</span>`;
   }
 
   function renderNav() {
@@ -637,19 +666,24 @@
     return `
       <section>
         <div class="section-head">
-          <div><h2>Chat com a loja</h2><p>Suporte centralizado no pedido.</p></div>
+          <div><h2>Chat com a loja</h2><p>Suporte centralizado no pedido, com resposta ao vivo.</p></div>
+          ${liveBadge("ao vivo")}
           <a class="btn light" href="https://wa.me/${esc(data.settings.whatsapp)}" target="_blank" rel="noreferrer">${icon("phone")} WhatsApp</a>
         </div>
         <div class="chat-layout">
           <div class="message-panel">
             <div class="message-head"><strong>${thread?.orderId ? "Pedido vinculado" : "Atendimento Husky"}</strong><span class="status open">Online</span></div>
             <div class="message-body">
-              ${(thread?.messages || []).map((message) => `
-                <div class="bubble ${message.from === "customer" ? "customer" : "store"}">${esc(message.text)}<small>${Store.dateTime(message.createdAt)}</small></div>
-              `).join("")}
+              ${(thread?.messages || []).map(chatBubble).join("")}
             </div>
             <div class="quick-row" style="padding:12px 12px 0">
               ${["Prazo do pedido", "Quais sabores tem hoje?", "Preciso alterar endereco", "Problema com pagamento"].map((text) => `<button data-quick-chat="${esc(text)}">${esc(text)}</button>`).join("")}
+            </div>
+            <div class="emoji-row">
+              ${chatEmojis.map((emoji) => `<button type="button" data-chat-emoji="${esc(emoji)}">${emoji}</button>`).join("")}
+            </div>
+            <div class="sticker-row">
+              ${chatStickers.map((sticker) => `<button type="button" data-chat-sticker="${sticker.id}"><img src="${esc(sticker.image)}" alt="">${esc(sticker.label)}</button>`).join("")}
             </div>
             <form class="message-compose" data-chat-form>
               <input name="message" placeholder="Escreva sua mensagem" autocomplete="off">
@@ -961,6 +995,16 @@
       const input = event.currentTarget.querySelector("[name='message']");
       sendChat(input.value);
     });
+    root.querySelectorAll("[data-chat-emoji]").forEach((button) => button.addEventListener("click", () => {
+      const input = root.querySelector("[data-chat-form] [name='message']");
+      if (!input) return;
+      input.value = `${input.value}${input.value ? " " : ""}${button.dataset.chatEmoji}`;
+      input.focus();
+    }));
+    root.querySelectorAll("[data-chat-sticker]").forEach((button) => button.addEventListener("click", () => {
+      const sticker = chatStickers.find((item) => item.id === button.dataset.chatSticker);
+      if (sticker) sendChat(sticker.label, { sticker });
+    }));
     root.querySelectorAll("[data-quick-chat]").forEach((button) => button.addEventListener("click", () => sendChat(button.dataset.quickChat)));
     root.querySelectorAll("[data-help-topic]").forEach((button) => button.addEventListener("click", () => route("help")));
     root.querySelector("[data-profile-form]")?.addEventListener("submit", (event) => {

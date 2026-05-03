@@ -1613,3 +1613,249 @@ a {
     width: 100%;
   }
 }
+
+/* Husky v2 - acabamento visual, chat ativo e tempo real */
+body {
+  background:
+    linear-gradient(rgba(247, 243, 236, 0.88), rgba(247, 243, 236, 0.92)),
+    url("../assets/husky/hero.png") top right / min(46vw, 560px) auto no-repeat fixed,
+    linear-gradient(135deg, #f7f3ec 0%, #eef5fb 52%, #f6ead0 100%);
+}
+
+.client-sidebar,
+.client-cart,
+.admin-sidebar,
+.admin-topbar,
+.client-header,
+.panel,
+.metric,
+.order-card,
+.message-panel,
+.admin-chat {
+  border-color: rgba(95, 68, 46, 0.12);
+  box-shadow: 0 18px 42px rgba(38, 79, 125, 0.08);
+}
+
+.client-sidebar,
+.client-cart,
+.admin-sidebar {
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(18px);
+}
+
+.client-header,
+.admin-topbar,
+.panel,
+.order-card,
+.metric,
+.message-panel,
+.admin-chat {
+  background: rgba(255, 255, 255, 0.95);
+}
+
+.brand img {
+  box-shadow: 0 12px 24px rgba(38, 79, 125, 0.14);
+}
+
+.nav-btn,
+.admin-nav button,
+.btn,
+.icon-btn,
+.product-card,
+.product-admin,
+.order-card,
+.metric,
+.cart-item,
+.thread-btn {
+  transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease, border-color 0.18s ease;
+}
+
+.nav-btn:hover,
+.admin-nav button:hover,
+.btn:hover,
+.icon-btn:hover,
+.product-card:hover,
+.product-admin:hover,
+.order-card:hover,
+.metric:hover,
+.cart-item:hover,
+.thread-btn:hover {
+  transform: translateY(-2px);
+}
+
+.product-card:hover,
+.product-admin:hover,
+.order-card:hover,
+.metric:hover,
+.cart-item:hover {
+  box-shadow: 0 22px 48px rgba(38, 79, 125, 0.12);
+}
+
+.nav-btn.active,
+.admin-nav button.active,
+.mobile-tabbar button.active {
+  background: linear-gradient(135deg, rgba(66, 107, 158, 0.13), rgba(231, 180, 95, 0.15));
+  color: var(--brand-dark);
+}
+
+.hero,
+.home-hero,
+.store-hero {
+  position: relative;
+  overflow: hidden;
+}
+
+.hero::after,
+.home-hero::after,
+.store-hero::after {
+  content: "";
+  position: absolute;
+  right: 18px;
+  bottom: 10px;
+  width: min(190px, 34vw);
+  aspect-ratio: 1;
+  background: url("../assets/husky/mascote.png") center / contain no-repeat;
+  opacity: 0.28;
+  pointer-events: none;
+  filter: drop-shadow(0 18px 24px rgba(38, 79, 125, 0.18));
+}
+
+.product-card,
+.product-admin {
+  position: relative;
+  overflow: hidden;
+}
+
+.product-card::before,
+.product-admin::before {
+  content: "";
+  position: absolute;
+  inset: auto 0 0 0;
+  height: 4px;
+  background: linear-gradient(90deg, var(--brand), var(--honey), var(--berry));
+  opacity: 0.88;
+}
+
+.live-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  width: fit-content;
+  min-height: 34px;
+  padding: 7px 11px;
+  border-radius: 999px;
+  border: 1px solid rgba(47, 133, 90, 0.18);
+  background: #edfdf4;
+  color: var(--success);
+  font-size: 12px;
+  font-weight: 950;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.live-badge span {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--success);
+  box-shadow: 0 0 0 0 rgba(47, 133, 90, 0.42);
+  animation: husky-live 1.25s infinite;
+}
+
+@keyframes husky-live {
+  70% { box-shadow: 0 0 0 10px rgba(47, 133, 90, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(47, 133, 90, 0); }
+}
+
+.message-body {
+  background:
+    linear-gradient(rgba(249, 250, 251, 0.90), rgba(249, 250, 251, 0.92)),
+    url("../assets/husky/mascote.png") center / 220px auto no-repeat;
+}
+
+.bubble {
+  box-shadow: 0 10px 22px rgba(17, 24, 39, 0.06);
+}
+
+.bubble.customer {
+  background: linear-gradient(135deg, var(--brand), #5f84b2);
+}
+
+.bubble.store {
+  background: #fffdf8;
+}
+
+.sticker-bubble {
+  display: grid;
+  gap: 6px;
+  justify-items: center;
+  min-width: 140px;
+  background: rgba(255, 255, 255, 0.96) !important;
+  color: var(--ink) !important;
+}
+
+.chat-sticker {
+  width: 118px;
+  height: 118px;
+  object-fit: contain;
+  border-radius: var(--radius);
+  filter: drop-shadow(0 12px 18px rgba(38, 79, 125, 0.16));
+}
+
+.emoji-row,
+.sticker-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  padding: 10px 12px 0;
+}
+
+.emoji-row button,
+.sticker-row button {
+  min-height: 34px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--white);
+  color: var(--ink);
+  padding: 7px 10px;
+  font-weight: 900;
+  box-shadow: 0 8px 18px rgba(17, 24, 39, 0.04);
+}
+
+.emoji-row button:hover,
+.sticker-row button:hover {
+  border-color: var(--brand);
+  transform: translateY(-1px);
+}
+
+.sticker-row img {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+}
+
+.admin-chat {
+  background:
+    linear-gradient(rgba(255, 255, 255, 0.96), rgba(255, 255, 255, 0.96)),
+    linear-gradient(135deg, rgba(66, 107, 158, 0.12), rgba(231, 180, 95, 0.13));
+}
+
+.thread-list {
+  background: rgba(249, 250, 251, 0.72);
+}
+
+.thread-btn.active {
+  border-left: 4px solid var(--brand);
+}
+
+.notice.success {
+  animation: husky-toast 0.22s ease;
+}
+
+@keyframes husky-toast {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}

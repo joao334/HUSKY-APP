@@ -2,6 +2,15 @@
   const KEY = "husky_v2_data";
   const CART_KEY = "husky_v2_cart";
   const PROFILE_KEY = "husky_v2_profile";
+  const LIVE_KEY = "husky_v2_live_ping";
+  const LIVE_CHANNEL = "husky_v2_realtime";
+  const SOURCE_ID = `tab-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+  let liveChannel = null;
+  try {
+    liveChannel = new BroadcastChannel(LIVE_CHANNEL);
+  } catch (error) {
+    liveChannel = null;
+  }
 
   function clone(value) {
     return JSON.parse(JSON.stringify(value));
@@ -41,10 +50,48 @@
     }
   }
 
-  function write(data) {
+  function emitData(normalized, remote) {
+    window.dispatchEvent(new CustomEvent("husky:data", { detail: normalized }));
+    if (remote) return;
+    const ping = { source: SOURCE_ID, at: Date.now() };
+    try {
+      if (liveChannel) liveChannel.postMessage(ping);
+    } catch (error) {}
+    try {
+      localStorage.setItem(LIVE_KEY, JSON.stringify(ping));
+    } catch (error) {}
+  }
+
+  function notifyRemoteData() {
+    window.dispatchEvent(new CustomEvent("husky:data", { detail: read() }));
+  }
+
+  if (liveChannel) {
+    liveChannel.onmessage = (event) => {
+      if (event.data?.source !== SOURCE_ID) notifyRemoteData();
+    };
+  }
+
+  window.addEventListener("storage", (event) => {
+    if (event.key === KEY && event.newValue) notifyRemoteData();
+    if (event.key === LIVE_KEY && event.newValue) {
+      try {
+        const ping = JSON.parse(event.newValue);
+        if (ping.source !== SOURCE_ID) notifyRemoteData();
+      } catch (error) {}
+    }
+    if (event.key === CART_KEY) {
+      window.dispatchEvent(new CustomEvent("husky:cart", { detail: getCart() }));
+    }
+    if (event.key === PROFILE_KEY) {
+      window.dispatchEvent(new CustomEvent("husky:profile", { detail: getProfile() }));
+    }
+  });
+
+  function write(data, options) {
     const normalized = normalize(data);
     localStorage.setItem(KEY, JSON.stringify(normalized));
-    window.dispatchEvent(new CustomEvent("husky:data", { detail: normalized }));
+    emitData(normalized, options?.remote === true);
     return normalized;
   }
 
@@ -431,7 +478,7 @@
     return saved;
   }
 
-  function addChatMessage(threadId, from, text, imageUrl) {
+  function addChatMessage(threadId, from, text, imageUrl, extra) {
     const data = read();
     let thread = data.chatThreads.find((item) => item.id === threadId || item.orderId === threadId);
     if (!thread) {
@@ -448,13 +495,23 @@
       };
       data.chatThreads.unshift(thread);
     }
-    thread.messages.push({ id: uid("msg"), from, text, imageUrl: imageUrl || "", createdAt: new Date().toISOString() });
+    const extraData = extra || {};
+    const cleanText = String(text || "").trim();
+    if (!cleanText && !imageUrl && !extraData.stickerUrl) return thread;
+    const message = Object.assign({
+      id: uid("msg"),
+      from,
+      text: cleanText,
+      imageUrl: imageUrl || "",
+      createdAt: new Date().toISOString()
+    }, extraData);
+    thread.messages.push(message);
     thread.unread = from === "customer" ? Number(thread.unread || 0) + 1 : 0;
     thread.status = "open";
     addNotification(data, {
       userId: from === "customer" ? "admin" : thread.customerId,
       title: "Nova mensagem",
-      message: text,
+      message: text || message.stickerLabel || "Figurinha enviada.",
       type: "chat",
       orderId: thread.orderId
     });
