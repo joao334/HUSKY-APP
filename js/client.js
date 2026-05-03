@@ -40,8 +40,30 @@
     { id: "logo", label: "Husky", image: "assets/husky/logo.png" }
   ];
 
+  let supabaseAuthClient = null;
+  let supabaseAuthBound = false;
+
   function googleClientId(data) {
     return data?.settings?.integrations?.google?.clientId || data?.settings?.googleClientId || window.HUSKY_CONFIG?.googleClientId || "";
+  }
+
+  function getSupabaseClient() {
+    const cfg = window.HUSKY_CONFIG || {};
+    if (!cfg.supabaseUrl || !cfg.supabaseAnonKey || !window.supabase?.createClient) return null;
+    if (!supabaseAuthClient) {
+      supabaseAuthClient = window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseAnonKey, {
+        auth: {
+          persistSession: true,
+          autoRefreshToken: true,
+          detectSessionInUrl: true
+        }
+      });
+    }
+    return supabaseAuthClient;
+  }
+
+  function supabaseRedirectUrl() {
+    return `${window.location.origin}${window.location.pathname}`;
   }
 
   function decodeJwtPayload(token) {
@@ -54,27 +76,73 @@
     }
   }
 
-  function applyGoogleAccount(payload) {
+  function applyGoogleAccount(payload, options) {
     const current = Store.getProfile();
+    const providerId = payload.sub || payload.id || current.googleSub || current.id;
     const profile = Store.setProfile({
-      id: payload.sub ? `google-${payload.sub}` : current.id,
-      name: payload.name || current.name,
+      id: providerId ? `google-${providerId}` : current.id,
+      name: payload.name || payload.full_name || current.name,
       email: payload.email || current.email,
       phone: current.phone,
-      avatarUrl: payload.picture || current.avatarUrl || "",
+      avatarUrl: payload.picture || payload.avatar_url || current.avatarUrl || "",
       authProvider: "google",
-      googleSub: payload.sub || current.googleSub || "",
+      googleSub: providerId || current.googleSub || "",
+      authUserId: payload.authUserId || payload.id || "",
       savedAccount: true
     });
     const data = Store.read();
     data.settings.integrations = data.settings.integrations || {};
     data.settings.integrations.google = Object.assign({}, data.settings.integrations.google || {}, {
       enabled: true,
-      status: googleClientId(data) ? "connected" : "demo",
+      status: getSupabaseClient() ? "connected_supabase" : (googleClientId(data) ? "connected" : "demo"),
       lastLoginAt: new Date().toISOString()
     });
     Store.write(data);
-    toast(`Conta Google salva para ${profile.name}.`);
+    if (!options?.silent) toast(`Conta Google salva para ${profile.name}.`);
+  }
+
+  function applySupabaseUser(user, options) {
+    if (!user) return;
+    const meta = user.user_metadata || {};
+    applyGoogleAccount({
+      sub: user.id,
+      id: user.id,
+      authUserId: user.id,
+      name: meta.full_name || meta.name || user.email || "Cliente Google",
+      full_name: meta.full_name || meta.name || "",
+      email: user.email || meta.email || "",
+      picture: meta.avatar_url || meta.picture || "",
+      avatar_url: meta.avatar_url || meta.picture || ""
+    }, options);
+  }
+
+  async function syncSupabaseGoogleSession(options) {
+    const client = getSupabaseClient();
+    if (!client?.auth) return false;
+    if (!supabaseAuthBound) {
+      supabaseAuthBound = true;
+      client.auth.onAuthStateChange((event, session) => {
+        if (session?.user) {
+          applySupabaseUser(session.user, { silent: event === "INITIAL_SESSION" || options?.silent });
+          if (window.location.search.includes("code=") || window.location.hash.includes("access_token=")) {
+            history.replaceState({}, document.title, supabaseRedirectUrl());
+          }
+        }
+      });
+    }
+    const { data, error } = await client.auth.getSession();
+    if (error) {
+      if (!options?.silent) toast(`Erro no login Google: ${error.message}`);
+      return false;
+    }
+    if (data?.session?.user) {
+      applySupabaseUser(data.session.user, { silent: true });
+      if (window.location.search.includes("code=") || window.location.hash.includes("access_token=")) {
+        history.replaceState({}, document.title, supabaseRedirectUrl());
+      }
+      return true;
+    }
+    return false;
   }
 
   function googleDemoLogin() {
@@ -86,7 +154,24 @@
     });
   }
 
-  function loginWithGoogle() {
+  async function loginWithGoogle() {
+    const client = getSupabaseClient();
+    if (client?.auth) {
+      toast("Abrindo login com Google...");
+      const { error } = await client.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: supabaseRedirectUrl(),
+          queryParams: {
+            access_type: "offline",
+            prompt: "select_account"
+          }
+        }
+      });
+      if (error) toast(`Erro no login Google: ${error.message}`);
+      return;
+    }
+
     const data = Store.read();
     const clientId = googleClientId(data);
     if (!clientId || !window.google?.accounts?.id) {
@@ -106,6 +191,7 @@
   function googleLoginCard(data, compact) {
     const profile = Store.getProfile();
     const connected = profile.authProvider === "google";
+    const supabaseReady = Boolean(getSupabaseClient());
     return `
       <div class="account-card ${compact ? "compact" : ""}">
         <div class="account-row">
@@ -116,7 +202,7 @@
               <span>${connected ? esc(profile.email || "Conta salva") : "Salve pedidos, enderecos, cupons e favoritos"}</span>
             </div>
           </div>
-          <span class="integration-status ${connected ? "on" : "warn"}">${connected ? "conectado" : "demo/Google"}</span>
+          <span class="integration-status ${connected ? "on" : "warn"}">${connected ? "conectado" : (supabaseReady ? "Supabase/Google" : "demo/Google")}</span>
         </div>
         <button class="btn google full" type="button" data-google-login><strong>G</strong> ${connected ? "Trocar conta Google" : "Entrar com Google"}</button>
       </div>
@@ -1174,4 +1260,5 @@
   window.addEventListener("husky:data", render);
   window.addEventListener("husky:cart", render);
   render();
+  syncSupabaseGoogleSession({ silent: true });
 })();

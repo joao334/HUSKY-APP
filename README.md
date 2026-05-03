@@ -118,3 +118,20 @@ husky-suite/
     ui/
     shared/
 ```
+
+## Login com Google via Supabase
+
+Esta versao ja esta com o botao "Entrar com Google" apontando para o Supabase Auth.
+
+Arquivos alterados:
+- `index.html`: adiciona a biblioteca `@supabase/supabase-js`.
+- `gestao.html`: adiciona a biblioteca `@supabase/supabase-js`.
+- `js/client.js`: usa `supabase.auth.signInWithOAuth({ provider: "google" })` e salva o perfil Google no app.
+- `config.js`: mantem `supabaseUrl` e `supabaseAnonKey` como fonte da conexao.
+
+No Supabase, confira:
+1. `Authentication > Providers > Google` ativado.
+2. `Authentication > URL Configuration > Site URL` com o link do seu site.
+3. `Redirect URLs` contendo o dominio do Vercel, por exemplo: `https://seu-site.vercel.app/**`.
+
+Depois de publicar no Vercel, clique em "Entrar com Google" na tela do cliente/perfil.

@@ -8,8 +8,8 @@ window.HUSKY_CONFIG = {
 
   appName: "Husk iFood",
 
-  // Google Login opcional. Para login real, crie um OAuth Client ID no Google Cloud
-  // e coloque o valor abaixo. Sem Client ID, o app usa um login demo salvo no navegador.
+  // Google Login via Supabase Auth. Se o Google Provider ja foi ativado no Supabase,
+  // nao precisa colocar Client ID aqui. Este campo fica apenas como plano B para Google Identity Services.
   googleClientId: "",
 
   // Integracao iFood opcional. Preencha com os dados oficiais da conta/parceiro.
