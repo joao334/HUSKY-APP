@@ -3,8 +3,8 @@ window.HUSKY_CONFIG = {
   storeName: "Husky Confeitaria e Caixa",
   city: "Embu das Artes",
   whatsapp: "5511945198349",
-  instagramHandle: "huskybolos",
-  instagramUrl: "https://www.instagram.com/huskybolos/",
+  instagramHandle: "huskyconfeiteiro",
+  instagramUrl: "https://www.instagram.com/huskyconfeiteiro/",
 
   appName: "Husk iFood",
 
@@ -36,6 +36,10 @@ window.HUSKY_CONFIG = {
   deliveryFee: 6.99,
   freeDeliveryFrom: 45,
   minOrder: 18,
+
+  // true = aceita bairros sem zona cadastrada usando a taxa padrao.
+  // false = bloqueia bairros que nao estejam em serviceArea ou deliveryZones.
+  allowUnlistedNeighborhoods: true,
   serviceArea: ["Centro", "Jardim Vista Alegre", "Parque Pirajussara", "Santo Eduardo"],
   openingHours: {
     monday: "Fechado",

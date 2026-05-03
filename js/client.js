@@ -241,7 +241,18 @@
 
   function profileAddress(data) {
     const profile = Store.getProfile();
-    return data.addresses.find((item) => item.userId === profile.id && item.isDefault) || data.addresses.find((item) => item.userId === profile.id);
+    return data.addresses.find((item) => item.userId === profile.id && item.isDefault)
+      || data.addresses.find((item) => item.userId === profile.id)
+      || {
+        id: "profile-address",
+        userId: profile.id,
+        label: "Endereco informado",
+        street: profile.address || "",
+        number: "",
+        neighborhood: profile.neighborhood || "",
+        city: data.settings.city || "Embu das Artes",
+        state: data.settings.state || "SP"
+      };
   }
 
   function productList(data, options) {
@@ -328,7 +339,7 @@
     const totals = Store.cartTotals(cart, data, ui.coupon, { fulfillment, address });
 
     if (fulfillment === "delivery" && !totals.delivery.available) {
-      toast("A loja ainda nao entrega nesse bairro.");
+      toast(totals.delivery.message || "Entrega indisponivel para esse bairro.");
       return;
     }
     if (totals.missingMin > 0) {
@@ -685,7 +696,7 @@
             <label class="field"><span>Nascimento opcional</span><input name="birthday" type="date" value="${esc(profile.birthday || "")}"></label>
             <label class="field full"><span>Endereco livre</span><input name="address" value="${esc(profile.address)}"></label>
             <label class="field"><span>Bairro</span><input name="neighborhood" value="${esc(profile.neighborhood)}"></label>
-            <label class="field"><span>Endereco salvo</span><select name="addressId">${addresses.map((item) => `<option value="${item.id}" ${item.id === address?.id ? "selected" : ""}>${esc(item.label)} · ${esc(item.neighborhood)}</option>`).join("")}</select></label>
+            <label class="field"><span>Endereco salvo</span><select name="addressId">${addresses.length ? addresses.map((item) => `<option value="${item.id}" ${item.id === address?.id ? "selected" : ""}>${esc(item.label)} · ${esc(item.neighborhood)}</option>`).join("") : `<option value="">Usar endereco digitado acima</option>`}</select></label>
             <label class="field"><span>Tipo</span><select name="fulfillment" data-fulfillment-select>
               <option value="delivery" ${ui.checkout.fulfillment === "delivery" ? "selected" : ""}>Entrega</option>
               <option value="pickup" ${ui.checkout.fulfillment === "pickup" ? "selected" : ""}>Retirada</option>
@@ -704,7 +715,7 @@
               <div class="field"><input data-coupon-input value="${esc(ui.coupon)}" placeholder="Cupom" /></div>
               <button class="btn light" type="button" data-apply-coupon>${icon("ticket")} Aplicar</button>
             </div>
-            ${totals.delivery.available ? `<p class="notice success">${esc(totals.delivery.message)} Prazo: ${esc(totals.delivery.estimatedTime)}.</p>` : `<p class="notice warning">Entrega indisponivel para esse bairro.</p>`}
+            ${totals.delivery.available ? `<p class="notice success">${esc(totals.delivery.message)} Prazo: ${esc(totals.delivery.estimatedTime)}.</p>` : `<p class="notice warning">${esc(totals.delivery.message || "Entrega indisponivel para esse bairro.")}</p>`}
             <div class="summary-lines">
               <div class="summary-line"><span>Subtotal</span><strong>${Store.money(totals.subtotal)}</strong></div>
               <div class="summary-line"><span>Entrega</span><strong>${Store.money(totals.deliveryFee)}</strong></div>

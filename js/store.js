@@ -179,27 +179,73 @@
     return Number(product.promotionalPrice || product.price || 0);
   }
 
+  function normalizeText(value) {
+    return String(value || "")
+      .trim()
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/\s+/g, " ");
+  }
+
   function deliveryInfo(data, address) {
-    const neighborhood = String(address?.neighborhood || address || "").toLowerCase();
-    const zone = data.deliveryZones.find((item) =>
-      item.active && String(item.neighborhood || item.name).toLowerCase() === neighborhood
-    );
-    if (!zone) {
+    const settings = data.settings || {};
+    const defaultDelivery = {
+      available: settings.allowDelivery !== false,
+      fee: Number(settings.deliveryFee || 0),
+      minOrder: Number(settings.minOrder || 0),
+      estimatedTime: settings.deliveryTime || "35-55 min",
+      message: "Bairro sem zona cadastrada: usando taxa padrao da loja."
+    };
+
+    const neighborhood = normalizeText(address?.neighborhood || address || "");
+    const city = normalizeText(address?.city || settings.city || "");
+
+    if (!neighborhood) {
+      return Object.assign({}, defaultDelivery, {
+        message: "Informe o bairro para calcular com mais precisao. Por enquanto, usamos a taxa padrao."
+      });
+    }
+
+    const exactZone = data.deliveryZones.find((item) => {
+      const zoneNeighborhood = normalizeText(item.neighborhood || item.name);
+      const zoneName = normalizeText(item.name);
+      const zoneCity = normalizeText(item.city || "");
+      const neighborhoodMatches = zoneNeighborhood === neighborhood || zoneName === neighborhood;
+      const cityMatches = !zoneCity || !city || zoneCity === city;
+      return neighborhoodMatches && cityMatches;
+    });
+
+    if (exactZone) {
+      if (exactZone.active === false || exactZone.isActive === false) {
+        return {
+          available: false,
+          fee: Number(exactZone.deliveryFee || settings.deliveryFee || 0),
+          minOrder: Number(exactZone.minOrder || exactZone.minimumOrderValue || settings.minOrder || 0),
+          estimatedTime: settings.deliveryTime || "35-55 min",
+          message: `Entrega temporariamente indisponivel para ${exactZone.name || address?.neighborhood || "esse bairro"}.`
+        };
+      }
+
       return {
-        available: data.settings.serviceArea.map((item) => item.toLowerCase()).includes(neighborhood),
-        fee: Number(data.settings.deliveryFee || 0),
-        minOrder: Number(data.settings.minOrder || 0),
-        estimatedTime: data.settings.deliveryTime,
-        message: "Usando taxa padrao da loja."
+        available: true,
+        fee: Number(exactZone.deliveryFee || settings.deliveryFee || 0),
+        minOrder: Number(exactZone.minOrder || exactZone.minimumOrderValue || settings.minOrder || 0),
+        estimatedTime: `${exactZone.estimatedMin || settings.deliveryMin || 35}-${exactZone.estimatedMax || settings.deliveryMax || 55} min`,
+        message: `Entrega em ${exactZone.name || address?.neighborhood || "seu bairro"}.`
       };
     }
-    return {
-      available: true,
-      fee: Number(zone.deliveryFee || 0),
-      minOrder: Number(zone.minOrder || data.settings.minOrder || 0),
-      estimatedTime: `${zone.estimatedMin}-${zone.estimatedMax} min`,
-      message: `Entrega em ${zone.name}.`
-    };
+
+    const serviceArea = Array.isArray(settings.serviceArea) ? settings.serviceArea.map(normalizeText) : [];
+    const listed = serviceArea.includes(neighborhood);
+    const allowUnlisted = settings.allowUnlistedNeighborhoods !== false;
+
+    return Object.assign({}, defaultDelivery, {
+      available: settings.allowDelivery !== false && (allowUnlisted || listed),
+      message: listed
+        ? "Usando taxa padrao da loja."
+        : "Esse bairro ainda nao tem taxa personalizada: usando taxa padrao da loja."
+    });
   }
 
   function cartTotals(cart, data, couponCode, options) {

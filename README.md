@@ -135,3 +135,21 @@ No Supabase, confira:
 3. `Redirect URLs` contendo o dominio do Vercel, por exemplo: `https://seu-site.vercel.app/**`.
 
 Depois de publicar no Vercel, clique em "Entrar com Google" na tela do cliente/perfil.
+
+
+## Correção de entrega por bairro
+
+Nesta versão, bairros sem zona de entrega cadastrada não bloqueiam mais o checkout automaticamente. O sistema usa a taxa padrão configurada em `config.js`:
+
+```js
+allowUnlistedNeighborhoods: true,
+deliveryFee: 6.99
+```
+
+Se quiser bloquear bairros fora da área cadastrada, altere para:
+
+```js
+allowUnlistedNeighborhoods: false
+```
+
+Com `true`, o pedido pode ser finalizado mesmo que o bairro ainda não exista em `deliveryZones`.

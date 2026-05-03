@@ -41,6 +41,7 @@
       allowScheduling: true,
       allowPickup: true,
       allowDelivery: true,
+      allowUnlistedNeighborhoods: cfg.allowUnlistedNeighborhoods !== false,
       allowChat: true,
       allowReviews: true,
       googleClientId: cfg.googleClientId || "",
