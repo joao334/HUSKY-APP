@@ -13,7 +13,42 @@
   <script src="js/store.js"></script>
 </head>
 <body data-app="gestao">
+  <!-- Loader animado Husky Confeiteiro -->
+  <div id="husky-loader-overlay" class="husky-loader-overlay" aria-label="Carregando Husky Confeiteiro">
+    <div class="husky-loader-stage">
+      <div class="husky-loader-orbit" aria-hidden="true">
+        <span class="loader-sweet sweet-1">🍫</span>
+        <span class="loader-sweet sweet-2">🧁</span>
+        <span class="loader-sweet sweet-3">🍓</span>
+        <span class="loader-sweet sweet-4">🥄</span>
+        <span class="loader-sweet sweet-5">🍰</span>
+        <span class="loader-sweet sweet-6">✨</span>
+      </div>
+      <div class="husky-loader-blue-pop"></div>
+      <div class="husky-loader-mascot-wrap">
+        <img src="assets/husky/husky-loader-logo.png" alt="Husky Confeiteiro" class="husky-loader-mascot">
+        <div class="husky-loader-shine" aria-hidden="true"></div>
+      </div>
+      <div class="husky-loader-brand">
+        <span>Husky</span>
+        <small>Confeiteiro</small>
+      </div>
+      <div class="husky-loader-progress">
+        <div class="husky-loader-track"><div class="husky-loader-fill"></div></div>
+        <p>Preparando delícias...</p>
+      </div>
+    </div>
+  </div>
+  <div id="husky-pull-loader" class="husky-pull-loader" aria-hidden="true">
+    <img src="assets/husky/husky-loader-logo.png" alt="">
+    <div class="husky-pull-copy">
+      <strong>Puxe para atualizar</strong>
+      <span>Solte para dar um uivo</span>
+    </div>
+  </div>
+
   <div id="admin-root" class="admin-root"></div>
   <script src="js/gestao.js"></script>
+  <script src="js/husky-loader.js"></script>
 </body>
 </html>

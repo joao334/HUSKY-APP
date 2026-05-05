@@ -1,0 +1,16 @@
+ALTERAÇÃO REALIZADA
+
+Integrei o loader animado da Husky no sistema do cliente e no painel de gestão.
+
+O que foi adicionado:
+- Tela de carregamento com a logo enviada do Husky.
+- Animação divertida com doces girando, bounce do mascote, brilho e fundo azul orgânico.
+- Barra de carregamento posicionada mais para baixo.
+- Animação ao puxar a tela no celular: puxe de cima para baixo para aparecer o mini Husky; ao soltar, abre a animação de atualização.
+
+Arquivos alterados/adicionados:
+- index.html
+- gestao.html
+- css/styles.css
+- js/husky-loader.js
+- assets/husky/husky-loader-logo.png
